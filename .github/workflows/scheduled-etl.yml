@@ -1,0 +1,42 @@
+name: Scheduled ETL
+
+on:
+  schedule:
+    - cron: "23 8 * * 1"
+  workflow_dispatch:
+
+jobs:
+  scheduled-etl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ETL dependencies
+        run: pip install -r etl/requirements.txt
+
+      - name: Fetch public source data
+        run: python etl/fetch_public_sources.py
+
+      - name: Run ETL
+        run: python etl/run_pipeline.py
+
+      - name: Build site
+        run: npm run build
+
+      # Intentionally no auto-commit step. Generated files should only be
+      # committed by an explicit future workflow decision.

@@ -1,0 +1,588 @@
+---
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
+import DataSubnav from "@components/DataSubnav.astro";
+import Layout from "@components/Layout.astro";
+import {
+  formatGeneratedAt,
+  getPropertiesPayload,
+  getPropertyFacts,
+  getPropertyHistory,
+  getPropertyPermits,
+  getSources
+} from "@lib/properties";
+import { withBasePath } from "@lib/urls";
+
+type SourceManifestEntry = {
+  source_id: string;
+  raw_file_uri?: string;
+  retrieved_at?: string;
+  where?: string;
+  out_fields?: string;
+  return_geometry?: boolean;
+  row_count?: number;
+  sha256_hash?: string;
+};
+
+type SourceManifest = {
+  retrieved_at?: string;
+  sources?: Record<string, SourceManifestEntry>;
+};
+
+type FetchSummary = {
+  retrieved_at?: string;
+  hud_mn002_building_records?: number;
+  hud_scattered_site_building_records?: number;
+  hud_scattered_site_unmatched_to_parcel?: number;
+  metrogis_minneapolis_parcel_records?: number;
+  metrogis_public_housing_name_candidates?: number;
+  minneapolis_ccs_permit_records?: number;
+  minneapolis_ccs_permits_matched_to_properties?: number;
+  minneapolis_assessing_candidates_by_year?: Record<string, number>;
+  exported_properties?: number;
+  exported_property_facts?: number;
+  exported_property_permits?: number;
+  exported_evidence_rows?: number;
+  exported_change_events?: number;
+  source_extracts?: Record<string, SourceManifestEntry>;
+};
+
+type EtlRunSummary = {
+  run_id?: string;
+  started_at?: string;
+  completed_at?: string;
+  status?: string;
+  row_counts?: Record<string, number>;
+  warnings?: unknown[];
+};
+
+async function readProjectJson<T>(relativePath: string, fallback: T): Promise<T> {
+  try {
+    const body = await readFile(path.join(process.cwd(), relativePath), "utf8");
+    return JSON.parse(body) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+const [
+  payload,
+  sources,
+  propertyHistory,
+  facts,
+  permits,
+  sourceManifest,
+  fetchSummary,
+  etlRun
+] = await Promise.all([
+  getPropertiesPayload(),
+  getSources(),
+  getPropertyHistory(),
+  getPropertyFacts(),
+  getPropertyPermits(),
+  readProjectJson<SourceManifest>("data/raw/source-manifest.json", { sources: {} }),
+  readProjectJson<FetchSummary>("data/raw/fetch-summary.json", {}),
+  readProjectJson<EtlRunSummary>("data/processed/etl-run-last.json", {})
+]);
+
+const rowCounts = {
+  properties: etlRun.row_counts?.properties ?? payload.properties.length,
+  property_versions: etlRun.row_counts?.property_versions ?? propertyHistory.property_versions.length,
+  source_records: etlRun.row_counts?.source_records ?? sources.source_records.length,
+  property_evidence: etlRun.row_counts?.property_evidence ?? sources.property_evidence.length,
+  change_events: etlRun.row_counts?.change_events ?? propertyHistory.change_events.length,
+  property_facts: etlRun.row_counts?.property_facts ?? facts.property_facts.length,
+  property_permits: etlRun.row_counts?.property_permits ?? permits.property_permits.length
+};
+
+const formatCount = (value: number | null | undefined): string =>
+  typeof value === "number" && Number.isFinite(value)
+    ? value.toLocaleString()
+    : "Not tracked";
+
+const formatHash = (value: string | null | undefined): string =>
+  value ? `${value.slice(0, 16)}...` : "Not tracked";
+
+const rawSources = Object.values(sourceManifest.sources ?? {});
+const rawSourceById = new Map(Object.entries(sourceManifest.sources ?? {}));
+const rawRowTotal = rawSources.reduce((total, source) => total + (source.row_count ?? 0), 0);
+const assessingRawTotal = rawSources
+  .filter((source) => source.source_id.startsWith("minneapolis_assessing_parcels_"))
+  .reduce((total, source) => total + (source.row_count ?? 0), 0);
+const assessingCandidatesByYear = fetchSummary.minneapolis_assessing_candidates_by_year ?? {};
+const assessingCandidateText = Object.entries(assessingCandidatesByYear)
+  .map(([year, count]) => `${year}: ${formatCount(count)}`)
+  .join(" / ");
+const evidenceCountBySource = sources.property_evidence.reduce<Record<string, number>>((counts, evidence) => {
+  counts[evidence.source_id] = (counts[evidence.source_id] ?? 0) + 1;
+  return counts;
+}, {});
+
+const sourceLineageDetails: Record<string, { description: string; extractionScope: string; transformUse: string }> = {
+  hud_public_housing_buildings_mn002: {
+    description:
+      "HUD building-level public housing records for MPHA participant MN002. The transform keeps development MN002000002 / Scattered Sites as direct evidence.",
+    extractionScope:
+      "Extract participant MN002 records, then filter to DEVELOPMENT_CODE MN002000002 during transform.",
+    transformUse:
+      "Direct scattered-site evidence; building points are matched to MetroGIS parcels when possible."
+  },
+  metrogis_hennepin_minneapolis_parcels_current: {
+    description:
+      "Minnesota Geospatial Commons open parcel geometry and ownership attributes for Hennepin County parcels in Minneapolis.",
+    extractionScope:
+      "Extract ctu_name='Minneapolis' and co_name='Hennepin' with parcel geometry.",
+    transformUse:
+      "Provides parcel IDs, geometry, owner/taxpayer names, parcel facts, map coordinates, and owner/taxpayer name candidates."
+  },
+  minneapolis_ccs_permits_current: {
+    description:
+      "City construction and code services permit records used as parcel-level context for matched properties.",
+    extractionScope:
+      "Extract the full public permit layer, then match permits to exported properties by normalized APN.",
+    transformUse:
+      "Publishes permit numbers, types, status, values, dates, unit changes, and redacted work descriptions."
+  },
+  minneapolis_assessing_parcels_2023: {
+    description:
+      "Annual Minneapolis assessing parcel table with owner, taxpayer, property type, building use, unit, value, and coordinate fields.",
+    extractionScope:
+      "Extract the full 2023 annual public table before candidate filtering.",
+    transformUse:
+      "Owner/taxpayer public-housing name matches are kept only when the property also looks like small residential housing."
+  },
+  minneapolis_assessing_parcels_2024: {
+    description:
+      "Annual Minneapolis assessing parcel table with owner, taxpayer, property type, building use, unit, value, and coordinate fields.",
+    extractionScope:
+      "Extract the full 2024 annual public table before candidate filtering.",
+    transformUse:
+      "Adds annual evidence, parcel facts, and source-record comparisons for property characteristic changes."
+  },
+  minneapolis_assessing_parcels_2025: {
+    description:
+      "Annual Minneapolis assessing parcel table with owner, taxpayer, property type, building use, unit, value, and coordinate fields.",
+    extractionScope:
+      "Extract the full 2025 annual public table before candidate filtering.",
+    transformUse:
+      "Current-year assessing candidates help determine current status and confidence."
+  },
+  mpha_properties_overview: {
+    description:
+      "MPHA public portfolio page describing scattered-site homes as CHR single-family and multiplex homes.",
+    extractionScope:
+      "Public website citation used for portfolio context; no raw JSONL snapshot is generated.",
+    transformUse:
+      "Adds portfolio context evidence and explains why CHR ownership names are relevant."
+  }
+};
+
+const sourceCards = sources.source_records.map((source) => {
+  const raw = rawSourceById.get(source.source_id) ?? fetchSummary.source_extracts?.[source.source_id];
+  const detail = sourceLineageDetails[source.source_id];
+  return {
+    ...source,
+    description: detail?.description ?? source.public_citation_text,
+    extractionScope: detail?.extractionScope ?? raw?.where ?? "Published source metadata only.",
+    transformUse: detail?.transformUse ?? "Source citation and evidence support.",
+    rawRowCount: raw?.row_count,
+    rawFileUri: raw?.raw_file_uri || source.raw_file_uri,
+    hash: source.sha256_hash || raw?.sha256_hash,
+    evidenceRows: evidenceCountBySource[source.source_id] ?? 0
+  };
+});
+
+const files = [
+  {
+    href: withBasePath("/data/properties.csv"),
+    label: "properties.csv",
+    rows: rowCounts.properties,
+    description: "Spreadsheet-friendly current and historical property table."
+  },
+  {
+    href: withBasePath("/data/properties.json"),
+    label: "properties.json",
+    rows: rowCounts.properties,
+    description: "Complete property records for reuse in applications."
+  },
+  {
+    href: withBasePath("/data/properties.geojson"),
+    label: "properties.geojson",
+    rows: payload.properties.filter((property) => property.latitude !== null && property.longitude !== null).length,
+    description: "Mapped property points for GIS tools and web maps."
+  },
+  {
+    href: withBasePath("/data/property-facts.csv"),
+    label: "property-facts.csv",
+    rows: rowCounts.property_facts,
+    description: "Parcel sale, tax, assessed value, land use, and building facts."
+  },
+  {
+    href: withBasePath("/data/property-facts.json"),
+    label: "property-facts.json",
+    rows: rowCounts.property_facts,
+    description: "Structured parcel fact enrichment keyed by property ID."
+  },
+  {
+    href: withBasePath("/data/property-permits.csv"),
+    label: "property-permits.csv",
+    rows: rowCounts.property_permits,
+    description: "Construction permit records matched by parcel APN."
+  },
+  {
+    href: withBasePath("/data/property-permits.json"),
+    label: "property-permits.json",
+    rows: rowCounts.property_permits,
+    description: "Structured construction permit enrichment keyed by property ID."
+  },
+  {
+    href: withBasePath("/data/property-history.json"),
+    label: "property-history.json",
+    rows: rowCounts.property_versions + rowCounts.change_events,
+    description: "Property versions and source-record characteristic changes."
+  },
+  {
+    href: withBasePath("/data/sources.json"),
+    label: "sources.json",
+    rows: rowCounts.source_records + rowCounts.property_evidence,
+    description: "Source citations, hashes, and evidence notes."
+  },
+  {
+    href: withBasePath("/data/changelog.json"),
+    label: "changelog.json",
+    rows: rowCounts.change_events,
+    description: "Property characteristic change events sorted by date."
+  }
+];
+
+const lineageStages = [
+  {
+    eyebrow: "Extract",
+    title: "Land source-scope snapshots",
+    stat: `${formatCount(rawRowTotal)} raw rows`,
+    text:
+      "Official ArcGIS/API rows are saved first with retrieval time, query scope, source URL, raw file path, and SHA-256 hash.",
+    items: [
+      `HUD public housing buildings: ${formatCount(fetchSummary.hud_mn002_building_records ?? rawSourceById.get("hud_public_housing_buildings_mn002")?.row_count)} rows`,
+      `MetroGIS Minneapolis parcels: ${formatCount(fetchSummary.metrogis_minneapolis_parcel_records ?? rawSourceById.get("metrogis_hennepin_minneapolis_parcels_current")?.row_count)} rows`,
+      `Minneapolis assessing 2023-2025: ${formatCount(assessingRawTotal)} rows`,
+      `Minneapolis CCS permits: ${formatCount(fetchSummary.minneapolis_ccs_permit_records ?? rawSourceById.get("minneapolis_ccs_permits_current")?.row_count)} rows`
+    ]
+  },
+  {
+    eyebrow: "Filter",
+    title: "Identify public-housing candidates",
+    stat: `${formatCount(rowCounts.properties)} published properties`,
+    text:
+      "Candidate logic runs after landing, so extraction stays broad and auditable while scattered-site filtering remains inspectable.",
+    items: [
+      `HUD MN002 buildings to scattered-site development: ${formatCount(fetchSummary.hud_mn002_building_records)} to ${formatCount(fetchSummary.hud_scattered_site_building_records)} records`,
+      `MetroGIS owner/taxpayer public-housing name matches: ${formatCount(fetchSummary.metrogis_public_housing_name_candidates)} parcels`,
+      `Assessing owner/taxpayer match plus small residential filter: ${assessingCandidateText || "Not tracked"}`,
+      `Permits matched only after final parcel set: ${formatCount(fetchSummary.minneapolis_ccs_permits_matched_to_properties)} records`
+    ]
+  },
+  {
+    eyebrow: "Transform",
+    title: "Normalize, validate, and score",
+    stat: `${formatCount(rowCounts.property_evidence)} evidence rows`,
+    text:
+      "Rows are converted into stable IDs and comparable fields before confidence labels and source-record changes are computed.",
+    items: [
+      "Parcel IDs are stripped to alphanumeric keys and addresses/names are cleaned.",
+      "Hennepin HARN X/Y coordinates are projected to WGS84 for map points.",
+      "Evidence references must point to known properties and known sources.",
+      "Confidence labels are computed from evidence strength and exclusion claims."
+    ]
+  },
+  {
+    eyebrow: "Publish",
+    title: "Write static public files",
+    stat: `${files.length} downloadable files`,
+    text:
+      "The final outputs are static CSV, JSON, and GeoJSON files copied into public/data for the website and independent reuse.",
+    items: [
+      `Properties: ${formatCount(rowCounts.properties)} rows`,
+      `Parcel facts: ${formatCount(rowCounts.property_facts)} rows`,
+      `Matched permits: ${formatCount(rowCounts.property_permits)} rows`,
+      `Characteristic changes: ${formatCount(rowCounts.change_events)} rows`
+    ]
+  }
+];
+
+const sourceTargetMappings = [
+  {
+    source: "HUD Public Housing Buildings",
+    raw: `${formatCount(fetchSummary.hud_mn002_building_records)} raw rows`,
+    filter:
+      "Participant MN002 is extracted; development MN002000002 / Scattered Sites becomes direct evidence.",
+    transform:
+      "Building points are matched to MetroGIS parcels when possible; unmatched HUD scattered-site records are preserved.",
+    targets: "properties, properties.geojson, sources, property-history"
+  },
+  {
+    source: "MetroGIS Hennepin/Minneapolis Parcels",
+    raw: `${formatCount(fetchSummary.metrogis_minneapolis_parcel_records)} raw rows`,
+    filter:
+      "Extract scope is Minneapolis parcels in Hennepin County; transform keeps owner/taxpayer names matching public-housing patterns.",
+    transform:
+      "Supplies parcel geometry, owner/taxpayer context, sale/tax fields, acres, unit counts, and map coordinates.",
+    targets: "properties, property-facts, properties.geojson, sources"
+  },
+  {
+    source: "Minneapolis Assessing 2023-2025",
+    raw: `${formatCount(assessingRawTotal)} raw rows`,
+    filter:
+      "Annual public tables are filtered by public-housing owner/taxpayer name and small residential characteristics.",
+    transform:
+      "Coordinates are reprojected, latest annual values are selected, and annual comparisons create characteristic changes.",
+    targets: "properties, property-facts, property-history, changelog"
+  },
+  {
+    source: "Minneapolis CCS Permits",
+    raw: `${formatCount(fetchSummary.minneapolis_ccs_permit_records)} raw rows`,
+    filter:
+      "The full permit layer is landed first; records are matched to exported properties by normalized parcel APN.",
+    transform:
+      "Applicant names, addresses, phone numbers, emails, and resident-level fields are omitted or redacted.",
+    targets: "property-permits.csv, property-permits.json"
+  },
+  {
+    source: "MPHA Properties Overview",
+    raw: "Context citation",
+    filter:
+      "The public page is used as portfolio context for CHR single-family and multiplex scattered-site homes.",
+    transform:
+      "Adds low-weight portfolio context evidence so ownership-name matches are interpretable.",
+    targets: "sources, properties"
+  }
+];
+---
+
+<Layout title="Data Lineage & Downloads | Minneapolis Scattered-Site Housing Explorer" description="Download data and review source lineage for the scattered-site housing explorer.">
+  <section class="border-b border-line bg-paper">
+    <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_0.85fr] lg:px-8">
+      <div>
+        <p class="text-sm font-bold uppercase tracking-normal text-civic-green">Public data lineage</p>
+        <h1 class="mt-3 max-w-4xl text-4xl font-bold leading-tight text-ink sm:text-5xl">
+          Data downloads with provenance, filters, and source-to-target mapping.
+        </h1>
+        <p class="mt-5 max-w-3xl text-lg leading-8 text-ink/75">
+          The published files are generated from official source-scope snapshots, normalized ETL tables, evidence rows, and static exports. This page shows how raw public records become the CSV, JSON, and GeoJSON files used by the site.
+        </p>
+      </div>
+      <aside class="rounded border border-line bg-white p-5">
+        <h2 class="text-lg font-bold">Latest Run</h2>
+        <dl class="mt-4 grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <dt class="font-semibold text-ink/60">Raw rows</dt>
+            <dd class="text-3xl font-bold">{formatCount(rawRowTotal)}</dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-ink/60">Properties</dt>
+            <dd class="text-3xl font-bold">{formatCount(rowCounts.properties)}</dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-ink/60">Evidence rows</dt>
+            <dd class="text-3xl font-bold">{formatCount(rowCounts.property_evidence)}</dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-ink/60">Permit rows</dt>
+            <dd class="text-3xl font-bold">{formatCount(rowCounts.property_permits)}</dd>
+          </div>
+        </dl>
+        <p class="mt-4 text-sm text-ink/65">
+          Updated: {formatGeneratedAt(payload.generated_at)}
+        </p>
+        {etlRun.run_id && (
+          <p class="mt-2 text-xs font-semibold text-ink/50">Run ID: {etlRun.run_id}</p>
+        )}
+      </aside>
+    </div>
+  </section>
+
+  <DataSubnav active="downloads" />
+
+  <section id="lineage" class="bg-white">
+    <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <h2 class="text-2xl font-bold">ELT Flow</h2>
+        <p class="mt-3 text-ink/70">
+          The pipeline lands broad public snapshots first, then transforms them into candidate properties, evidence rows, enrichment tables, and static public downloads.
+        </p>
+      </div>
+
+      <div class="mt-7 overflow-x-auto pb-2">
+        <div class="grid min-w-[1080px] gap-4 lg:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr]">
+          {lineageStages.map((stage, index) => (
+            <>
+              <article class="rounded border border-line bg-paper p-5">
+                <p class="text-xs font-bold uppercase tracking-normal text-civic-green">{stage.eyebrow}</p>
+                <h3 class="mt-2 text-xl font-bold">{stage.title}</h3>
+                <p class="mt-3 text-3xl font-bold text-civic-lake">{stage.stat}</p>
+                <p class="mt-3 text-sm leading-6 text-ink/70">{stage.text}</p>
+                <ul class="mt-4 space-y-2 text-sm text-ink/75">
+                  {stage.items.map((item) => (
+                    <li class="rounded border border-line bg-white px-3 py-2">{item}</li>
+                  ))}
+                </ul>
+              </article>
+              {index < lineageStages.length - 1 && (
+                <div class="hidden items-center justify-center lg:flex">
+                  <span class="rounded-full border border-line bg-white px-3 py-2 text-xs font-bold uppercase text-ink/55">to</span>
+                </div>
+              )}
+            </>
+          ))}
+        </div>
+      </div>
+
+      <div class="mt-8 grid gap-4 lg:grid-cols-3">
+        <article class="rounded border border-line p-4">
+          <h3 class="font-bold">Candidate Rules</h3>
+          <p class="mt-2 text-sm leading-6 text-ink/70">
+            Public-housing owner or taxpayer names are matched against MPHA, Minneapolis Public Housing Authority, Community Housing Resources, and CHR patterns. Assessing candidates also need small residential characteristics.
+          </p>
+        </article>
+        <article class="rounded border border-line p-4">
+          <h3 class="font-bold">Confidence Labels</h3>
+          <p class="mt-2 text-sm leading-6 text-ink/70">
+            Direct HUD scattered-site evidence can confirm a property. Owner/taxpayer, parcel, and portfolio evidence contribute scores for likely or uncertain labels. Exclusion claims override inclusion.
+          </p>
+        </article>
+        <article class="rounded border border-line p-4">
+          <h3 class="font-bold">Privacy Boundary</h3>
+          <p class="mt-2 text-sm leading-6 text-ink/70">
+            Outputs stay at property level. Resident names, tenant records, household details, applicant contact fields, phone numbers, emails, and applicant addresses are not published.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="border-t border-line bg-paper">
+    <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <h2 class="text-2xl font-bold">Source To Target Mapping</h2>
+        <p class="mt-3 text-ink/70">
+          Each source keeps its own extraction scope and then feeds one or more normalized targets. The mapping below is the high-level route from raw public records to published files.
+        </p>
+      </div>
+      <div class="mt-6 grid gap-3">
+        {sourceTargetMappings.map((mapping) => (
+          <article class="grid gap-4 rounded border border-line bg-white p-4 lg:grid-cols-[1.1fr_0.95fr_1.2fr_0.9fr]">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-normal text-civic-green">Source</p>
+              <h3 class="mt-1 font-bold">{mapping.source}</h3>
+              <p class="mt-2 text-sm font-semibold text-ink/60">{mapping.raw}</p>
+            </div>
+            <div>
+              <p class="text-xs font-bold uppercase tracking-normal text-civic-lake">Filter</p>
+              <p class="mt-1 text-sm leading-6 text-ink/70">{mapping.filter}</p>
+            </div>
+            <div>
+              <p class="text-xs font-bold uppercase tracking-normal text-civic-clay">Transform</p>
+              <p class="mt-1 text-sm leading-6 text-ink/70">{mapping.transform}</p>
+            </div>
+            <div>
+              <p class="text-xs font-bold uppercase tracking-normal text-civic-gold">Targets</p>
+              <p class="mt-1 text-sm font-semibold leading-6 text-ink/75">{mapping.targets}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section id="downloads" class="border-t border-line bg-white">
+    <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 class="text-2xl font-bold">Downloads</h2>
+          <p class="mt-3 max-w-3xl text-ink/70">
+            Static files are copied from data/public into public/data during each successful pipeline run.
+          </p>
+        </div>
+        <p class="text-sm font-semibold text-ink/60">
+          {files.length} files | {formatCount(rowCounts.source_records)} source records
+        </p>
+      </div>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {files.map((file) => (
+          <a class="rounded border border-line bg-paper p-4 hover:border-civic-green hover:bg-white" href={file.href}>
+            <span class="block font-bold text-civic-green">{file.label}</span>
+            <span class="mt-2 block text-2xl font-bold text-ink">{formatCount(file.rows)}</span>
+            <span class="mt-1 block text-xs font-semibold uppercase tracking-normal text-ink/50">rows or features</span>
+            <span class="mt-3 block text-sm leading-6 text-ink/70">{file.description}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section id="sources" class="border-t border-line bg-paper">
+    <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <h2 class="text-2xl font-bold">Source Inventory</h2>
+        <p class="mt-3 text-ink/70">
+          Source records preserve agency, URL, retrieval date, record date, raw file path, public citation, and hash metadata when a raw snapshot exists.
+        </p>
+      </div>
+
+      <div class="mt-6 grid gap-4 lg:grid-cols-2">
+        {sourceCards.map((source) => (
+          <article class="rounded border border-line bg-white p-5">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p class="text-xs font-bold uppercase tracking-normal text-civic-green">{source.source_type}</p>
+                <h3 class="mt-1 text-xl font-bold">{source.source_name}</h3>
+                <p class="mt-1 text-sm font-semibold text-ink/60">{source.source_agency}</p>
+              </div>
+              <a class="rounded border border-line px-3 py-2 text-sm font-bold text-civic-green hover:border-civic-green" href={source.source_url} rel="noreferrer" target="_blank">
+                Source Link
+              </a>
+            </div>
+
+            <p class="mt-4 text-sm leading-6 text-ink/70">{source.description}</p>
+
+            <dl class="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+              <div class="rounded border border-line bg-paper p-3">
+                <dt class="font-semibold text-ink/55">Raw rows</dt>
+                <dd class="mt-1 text-lg font-bold">{formatCount(source.rawRowCount)}</dd>
+              </div>
+              <div class="rounded border border-line bg-paper p-3">
+                <dt class="font-semibold text-ink/55">Evidence rows</dt>
+                <dd class="mt-1 text-lg font-bold">{formatCount(source.evidenceRows)}</dd>
+              </div>
+              <div class="rounded border border-line bg-paper p-3">
+                <dt class="font-semibold text-ink/55">Retrieved</dt>
+                <dd class="mt-1 font-semibold">{source.retrieved_at ? formatGeneratedAt(source.retrieved_at) : "Not tracked"}</dd>
+              </div>
+              <div class="rounded border border-line bg-paper p-3">
+                <dt class="font-semibold text-ink/55">Record date</dt>
+                <dd class="mt-1 font-semibold">{source.record_date || "Not listed"}</dd>
+              </div>
+            </dl>
+
+            <div class="mt-4 grid gap-3">
+              <div>
+                <p class="text-xs font-bold uppercase tracking-normal text-ink/50">Extraction scope</p>
+                <p class="mt-1 text-sm leading-6 text-ink/70">{source.extractionScope}</p>
+              </div>
+              <div>
+                <p class="text-xs font-bold uppercase tracking-normal text-ink/50">Transform use</p>
+                <p class="mt-1 text-sm leading-6 text-ink/70">{source.transformUse}</p>
+              </div>
+              <div class="rounded border border-line bg-paper p-3">
+                <p class="text-xs font-bold uppercase tracking-normal text-ink/50">Raw file and hash</p>
+                <p class="mt-1 break-words font-mono text-xs text-ink/70">{source.rawFileUri || "No raw file snapshot"}</p>
+                <p class="mt-1 break-all font-mono text-xs text-ink/55" title={source.hash}>{formatHash(source.hash)}</p>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>

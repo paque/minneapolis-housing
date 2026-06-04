@@ -1,0 +1,452 @@
+[
+  {
+    "attributes": {
+      "OBJECTID": 8009,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "Minnehaha Townhomes",
+      "BUILDING_NUMBER": "41-4",
+      "BUILDING_TYPE_CODE": "RW",
+      "BUILDING_STATUS_TYPE_CODE": "INAPCP",
+      "NATIONAL_BLDG_ID": "7887130000",
+      "TOTAL_DWELLING_UNITS": 4,
+      "TOTAL_UNITS": 4,
+      "STD_ADDR": "5370 Riverview Rd                                 ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55417",
+      "LAT": 44.905555,
+      "LON": -93.200349,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.20034899968215,
+      "y": 44.90555499934163
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 15680,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "Sumner Field Townhome",
+      "BUILDING_NUMBER": "97-5",
+      "BUILDING_TYPE_CODE": "RW",
+      "BUILDING_STATUS_TYPE_CODE": "DDAPRD",
+      "NATIONAL_BLDG_ID": "8033030000",
+      "TOTAL_DWELLING_UNITS": 1,
+      "TOTAL_UNITS": 1,
+      "STD_ADDR": "718 Bryant Ave N                                  ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55411",
+      "LAT": 44.984656,
+      "LON": -93.29105899999999,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.29105899959359,
+      "y": 44.98465599876717
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 20999,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "Sumner Field Townhome",
+      "BUILDING_NUMBER": "97-4",
+      "BUILDING_TYPE_CODE": "RW",
+      "BUILDING_STATUS_TYPE_CODE": "DDAPRD",
+      "NATIONAL_BLDG_ID": "7033030000",
+      "TOTAL_DWELLING_UNITS": 1,
+      "TOTAL_UNITS": 1,
+      "STD_ADDR": "905 8th Ave N                                     ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55411",
+      "LAT": 44.986166999999995,
+      "LON": -93.29180099999999,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.29180099993344,
+      "y": 44.986166998887235
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 22444,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "Urban Gardens",
+      "BUILDING_NUMBER": "89-1",
+      "BUILDING_TYPE_CODE": "RW",
+      "BUILDING_STATUS_TYPE_CODE": "INAPCP",
+      "NATIONAL_BLDG_ID": "4957210000",
+      "TOTAL_DWELLING_UNITS": 6,
+      "TOTAL_UNITS": 6,
+      "STD_ADDR": "3501 Bloomington Ave Apt 1                        ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55407",
+      "LAT": 44.939541,
+      "LON": -93.252217,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.25221700014508,
+      "y": 44.939540998862824
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 37241,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "SCATTERED SITES",
+      "BUILDING_NUMBER": "043-49",
+      "BUILDING_TYPE_CODE": "SF",
+      "BUILDING_STATUS_TYPE_CODE": "DDDRFT",
+      "NATIONAL_BLDG_ID": "2727210000",
+      "TOTAL_DWELLING_UNITS": 1,
+      "TOTAL_UNITS": 1,
+      "STD_ADDR": "3125 Thomas Ave N                                 ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55411",
+      "LAT": 45.012552,
+      "LON": -93.313564,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.31356400012986,
+      "y": 45.012551998751334
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 42967,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "ROWHOUSES",
+      "BUILDING_NUMBER": "025-3",
+      "BUILDING_TYPE_CODE": "SF",
+      "BUILDING_STATUS_TYPE_CODE": "INAPCP",
+      "NATIONAL_BLDG_ID": "5696210000",
+      "TOTAL_DWELLING_UNITS": 1,
+      "TOTAL_UNITS": 1,
+      "STD_ADDR": "1310 Dupont Ave N                                 ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55411",
+      "LAT": 44.992712999999995,
+      "LON": -93.29235299999999,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.29235300030248,
+      "y": 44.99271299922391
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 54715,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "Linden Hills",
+      "BUILDING_NUMBER": "52-1",
+      "BUILDING_TYPE_CODE": "RW",
+      "BUILDING_STATUS_TYPE_CODE": "INAPCP",
+      "NATIONAL_BLDG_ID": "5937210000",
+      "TOTAL_DWELLING_UNITS": 5,
+      "TOTAL_UNITS": 5,
+      "STD_ADDR": "3816 W 44th St                                    ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55410",
+      "LAT": 44.923987,
+      "LON": -93.312786,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.31278599980502,
+      "y": 44.92398699935675
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 81210,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "ROWHOUSES",
+      "BUILDING_NUMBER": "025-2",
+      "BUILDING_TYPE_CODE": "SD",
+      "BUILDING_STATUS_TYPE_CODE": "INAPCP",
+      "NATIONAL_BLDG_ID": "4696210000",
+      "TOTAL_DWELLING_UNITS": 2,
+      "TOTAL_UNITS": 2,
+      "STD_ADDR": "919 14th Ave N                                    ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55411",
+      "LAT": 44.992894,
+      "LON": -93.291337,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.29133700032625,
+      "y": 44.99289399879674
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 92229,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "ROWHOUSES",
+      "BUILDING_NUMBER": "025-4",
+      "BUILDING_TYPE_CODE": "SD",
+      "BUILDING_STATUS_TYPE_CODE": "INAPCP",
+      "NATIONAL_BLDG_ID": "6696210000",
+      "TOTAL_DWELLING_UNITS": 2,
+      "TOTAL_UNITS": 2,
+      "STD_ADDR": "1314 Dupont Ave N                                 ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55411",
+      "LAT": 44.992740999999995,
+      "LON": -93.29235299999999,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.29235300030248,
+      "y": 44.99274099879511
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 133054,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "Minnehaha Townhomes",
+      "BUILDING_NUMBER": "41-1",
+      "BUILDING_TYPE_CODE": "RW",
+      "BUILDING_STATUS_TYPE_CODE": "INAPCP",
+      "NATIONAL_BLDG_ID": "4887130000",
+      "TOTAL_DWELLING_UNITS": 4,
+      "TOTAL_UNITS": 4,
+      "STD_ADDR": "5342 Riverview Rd                                 ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55417",
+      "LAT": 44.906273,
+      "LON": -93.20076,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.20075999958588,
+      "y": 44.90627299904603
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 133534,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "ROWHOUSES",
+      "BUILDING_NUMBER": "025-1",
+      "BUILDING_TYPE_CODE": "SF",
+      "BUILDING_STATUS_TYPE_CODE": "INAPCP",
+      "NATIONAL_BLDG_ID": "3696210000",
+      "TOTAL_DWELLING_UNITS": 1,
+      "TOTAL_UNITS": 1,
+      "STD_ADDR": "915 14th Ave N                                    ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55411",
+      "LAT": 44.992892999999995,
+      "LON": -93.291277,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.29127700005179,
+      "y": 44.992892998860306
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 135524,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "ROWHOUSES",
+      "BUILDING_NUMBER": "025-5",
+      "BUILDING_TYPE_CODE": "SD",
+      "BUILDING_STATUS_TYPE_CODE": "INAPCP",
+      "NATIONAL_BLDG_ID": "7696210000",
+      "TOTAL_DWELLING_UNITS": 2,
+      "TOTAL_UNITS": 2,
+      "STD_ADDR": "1322 Dupont Ave N                                 ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55411",
+      "LAT": 44.992796,
+      "LON": -93.29235299999999,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.29235300030248,
+      "y": 44.992795999228875
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 169306,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "Minnehaha Townhomes",
+      "BUILDING_NUMBER": "41-2",
+      "BUILDING_TYPE_CODE": "RW",
+      "BUILDING_STATUS_TYPE_CODE": "INAPCP",
+      "NATIONAL_BLDG_ID": "5887130000",
+      "TOTAL_DWELLING_UNITS": 4,
+      "TOTAL_UNITS": 4,
+      "STD_ADDR": "5350 Riverview Rd                                 ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55417",
+      "LAT": 44.906783999999995,
+      "LON": -93.20098399999999,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.20098399989186,
+      "y": 44.90678399921803
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 177688,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "SCATTERED SITES",
+      "BUILDING_NUMBER": "13-144",
+      "BUILDING_TYPE_CODE": "SF",
+      "BUILDING_STATUS_TYPE_CODE": "DDDRFT",
+      "NATIONAL_BLDG_ID": "2586210000",
+      "TOTAL_DWELLING_UNITS": 1,
+      "TOTAL_UNITS": 1,
+      "STD_ADDR": "2100 Lowry Ave N                                  ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55411",
+      "LAT": 45.013391999999996,
+      "LON": -93.305723,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.30572300037518,
+      "y": 45.013391999016235
+    }
+  },
+  {
+    "attributes": {
+      "OBJECTID": 177716,
+      "PARTICIPANT_CODE": "MN002",
+      "FORMAL_PARTICIPANT_NAME": "PHA in and for the City of Minneapolis",
+      "DEVELOPMENT_CODE": "MN002000002",
+      "PROJECT_NAME": "SCATTERED SITES",
+      "BUILDING_NAME": "Minnehaha Townhomes",
+      "BUILDING_NUMBER": "41-3",
+      "BUILDING_TYPE_CODE": "RW",
+      "BUILDING_STATUS_TYPE_CODE": "INAPCP",
+      "NATIONAL_BLDG_ID": "6887130000",
+      "TOTAL_DWELLING_UNITS": 4,
+      "TOTAL_UNITS": 4,
+      "STD_ADDR": "5362 Riverview Rd                                 ",
+      "STD_CITY": "Minneapolis                 ",
+      "STD_ST": "MN",
+      "STD_ZIP5": "55417",
+      "LAT": 44.906102,
+      "LON": -93.200563,
+      "LVL2KX": "R",
+      "LAST_UPDT_DTTM": 1775578761000,
+      "RAD_CHAP_INDR": "N",
+      "RAD_TYPE": " "
+    },
+    "geometry": {
+      "x": -93.20056299994238,
+      "y": 44.90610199892161
+    }
+  }
+]

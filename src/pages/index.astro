@@ -1,0 +1,120 @@
+---
+import Layout from "@components/Layout.astro";
+import ConfidenceBadge from "@components/ConfidenceBadge.astro";
+import {
+  formatGeneratedAt,
+  getPropertiesPayload,
+  getSources
+} from "@lib/properties";
+import { confidenceDefinitions } from "@lib/confidence";
+import { withBasePath } from "@lib/urls";
+
+const payload = await getPropertiesPayload();
+const sources = await getSources();
+const currentCount = payload.properties.filter((property) => property.is_current).length;
+const mappedCount = payload.properties.filter(
+  (property) => property.latitude !== null && property.longitude !== null
+).length;
+const byConfidence = payload.properties.reduce<Record<string, number>>((counts, property) => {
+  counts[property.confidence_level] = (counts[property.confidence_level] ?? 0) + 1;
+  return counts;
+}, {});
+---
+
+<Layout
+  title="Minneapolis Scattered-Site Housing Explorer"
+  description="Explore public records for Minneapolis scattered-site housing properties."
+>
+  <section class="border-b border-line bg-paper">
+    <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-8">
+      <div>
+        <p class="text-sm font-bold uppercase tracking-normal text-civic-green">
+          Minneapolis scattered-site housing records
+        </p>
+        <h1 class="mt-4 max-w-4xl text-4xl font-bold leading-tight text-ink sm:text-5xl">
+          Explore Minneapolis scattered-site housing properties.
+        </h1>
+        <p class="mt-5 max-w-3xl text-lg leading-8 text-ink/75">
+          Search addresses, parcel identifiers, ownership records, confidence labels, and changes over time from public sources.
+        </p>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <a class="rounded bg-civic-green px-4 py-3 text-sm font-bold text-white hover:bg-civic-green/90" href={withBasePath("/map/")}>
+            Explore Map
+          </a>
+          <a class="rounded border border-line bg-white px-4 py-3 text-sm font-bold text-ink hover:border-civic-green hover:text-civic-green" href={withBasePath("/properties/")}>
+            Search Properties
+          </a>
+          <a class="rounded border border-line bg-white px-4 py-3 text-sm font-bold text-ink hover:border-civic-green hover:text-civic-green" href={withBasePath("/data/")}>
+            Download Data
+          </a>
+        </div>
+      </div>
+
+      <aside class="rounded border border-line bg-white p-5">
+        <h2 class="text-lg font-bold">At A Glance</h2>
+        <dl class="mt-4 grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <dt class="font-semibold text-ink/60">Records</dt>
+            <dd class="text-3xl font-bold">{payload.properties.length.toLocaleString()}</dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-ink/60">Current records</dt>
+            <dd class="text-3xl font-bold">{currentCount.toLocaleString()}</dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-ink/60">Mapped parcels</dt>
+            <dd class="text-3xl font-bold">{mappedCount.toLocaleString()}</dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-ink/60">Public sources</dt>
+            <dd class="text-3xl font-bold">{sources.source_records.length.toLocaleString()}</dd>
+          </div>
+        </dl>
+        <p class="mt-4 text-sm text-ink/65">
+          Updated: {formatGeneratedAt(payload.generated_at)}
+        </p>
+        {payload.properties.length === 0 && (
+          <p class="mt-4 rounded border border-civic-gold bg-civic-gold/15 p-3 text-sm text-ink">
+            No property records are currently published.
+          </p>
+        )}
+      </aside>
+    </div>
+  </section>
+
+  <section class="bg-white">
+    <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-3 lg:px-8">
+      <div>
+        <h2 class="text-2xl font-bold">Record Categories</h2>
+        <p class="mt-3 text-ink/70">
+          Each record is labeled according to the strength of the public evidence available.
+        </p>
+      </div>
+      <div class="grid gap-3 lg:col-span-2 sm:grid-cols-2">
+        {Object.entries(confidenceDefinitions).map(([level, definition]) => (
+          <div class="rounded border border-line p-4">
+            <ConfidenceBadge level={level} />
+            <p class="mt-3 text-sm text-ink/70">{definition.description}</p>
+            <p class="mt-2 text-sm font-semibold">
+              Current count: {(byConfidence[level] ?? 0).toLocaleString()}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="border-t border-line bg-paper">
+    <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <h2 class="text-2xl font-bold">Designed For Public Review</h2>
+        <p class="mt-3 max-w-3xl text-ink/70">
+          The site brings together parcel records, ownership records, source citations, and change notes so the portfolio can be reviewed address by address.
+        </p>
+        <a class="mt-5 inline-flex rounded border border-line bg-white px-4 py-3 text-sm font-bold text-ink hover:border-civic-green hover:text-civic-green" href={withBasePath("/data/#lineage")}>
+          Review Data Lineage
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>

@@ -1,0 +1,85 @@
+---
+import Layout from "@components/Layout.astro";
+import PropertyCard from "@components/PropertyCard.astro";
+import { formatGeneratedAt, getPropertiesPayload } from "@lib/properties";
+
+const payload = await getPropertiesPayload();
+const properties = payload.properties;
+---
+
+<Layout title="Properties | Minneapolis Scattered-Site Housing Explorer" description="Search Minneapolis scattered-site housing property records.">
+  <section class="border-b border-line bg-paper">
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 class="text-3xl font-bold">Property List</h1>
+          <p class="mt-2 max-w-3xl text-ink/70">
+            Search by address, parcel ID, owner, taxpayer, record status, or confidence label.
+          </p>
+        </div>
+        <p class="text-sm font-semibold text-ink/65">
+          {properties.length.toLocaleString()} records | Updated {formatGeneratedAt(payload.generated_at)}
+        </p>
+      </div>
+
+      <div class="mt-6 grid gap-3 md:grid-cols-[1fr_220px]">
+        <label class="block">
+          <span class="sr-only">Search properties</span>
+          <input
+            class="w-full rounded border border-line bg-white px-4 py-3 text-base shadow-sm focus:shadow-focus"
+            data-property-search
+            placeholder="Search address, parcel, owner, taxpayer, or status"
+            type="search"
+          />
+        </label>
+        <label class="block">
+          <span class="sr-only">Filter by confidence</span>
+          <select class="w-full rounded border border-line bg-white px-4 py-3 text-base shadow-sm focus:shadow-focus" data-confidence-filter>
+            <option value="">All confidence labels</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="likely">Likely</option>
+            <option value="uncertain">Uncertain</option>
+            <option value="excluded">Excluded</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-white">
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      {properties.length > 0 ? (
+        <div class="grid gap-4" data-property-results>
+          {properties.map((property) => <PropertyCard property={property} />)}
+        </div>
+      ) : (
+        <div class="rounded border border-line bg-paper p-6">
+          <h2 class="text-xl font-bold">No records are currently published</h2>
+          <p class="mt-2 text-ink/70">
+            Check back after the next data update.
+          </p>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <script>
+    const searchInput = document.querySelector<HTMLInputElement>("[data-property-search]");
+    const confidenceFilter = document.querySelector<HTMLSelectElement>("[data-confidence-filter]");
+    const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-property-card]"));
+
+    function applyFilters() {
+      const query = String(searchInput?.value || "").trim().toLowerCase();
+      const confidence = String(confidenceFilter?.value || "");
+
+      for (const card of cards) {
+        const matchesQuery = !query || String(card.dataset.search || "").includes(query);
+        const matchesConfidence = !confidence || card.dataset.confidence === confidence;
+        card.toggleAttribute("hidden", !(matchesQuery && matchesConfidence));
+      }
+    }
+
+    searchInput?.addEventListener("input", applyFilters);
+    confidenceFilter?.addEventListener("change", applyFilters);
+  </script>
+</Layout>

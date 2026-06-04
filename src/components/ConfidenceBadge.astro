@@ -1,0 +1,18 @@
+---
+import { getConfidenceDefinition } from "@lib/confidence";
+
+const { level, score } = Astro.props as {
+  level: string;
+  score?: number | null;
+};
+
+const definition = getConfidenceDefinition(level);
+---
+
+<span
+  class={`inline-flex items-center rounded border px-2 py-1 text-xs font-semibold uppercase tracking-normal ${definition.className}`}
+  title={definition.description}
+>
+  {definition.label}{typeof score === "number" ? ` ${Math.round(score * 100)}%` : ""}
+</span>
+

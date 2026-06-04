@@ -1,0 +1,87 @@
+---
+import DataSubnav from "@components/DataSubnav.astro";
+import Layout from "@components/Layout.astro";
+import {
+  formatChangeEventType,
+  formatGeneratedAt,
+  getChangelog,
+  getProperties,
+  getPropertyHref
+} from "@lib/properties";
+import { withBasePath } from "@lib/urls";
+
+const changelog = await getChangelog();
+const properties = await getProperties();
+const propertyById = new Map(properties.map((property) => [property.property_id, property]));
+const changeTypeCounts = changelog.changes.reduce<Record<string, number>>((counts, change) => {
+  counts[change.event_type] = (counts[change.event_type] ?? 0) + 1;
+  return counts;
+}, {});
+---
+
+<Layout title="Property Characteristics Changes | Data | Minneapolis Scattered-Site Housing Explorer" description="Owner, taxpayer, classification, and unit-count changes found in public records.">
+  <section class="border-b border-line bg-paper">
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <p class="text-sm font-bold uppercase tracking-normal text-civic-green">Data audit view</p>
+      <h1 class="mt-3 text-3xl font-bold">Property Characteristics Changes</h1>
+      <p class="mt-3 max-w-3xl text-ink/70">
+        These events describe source-record changes in owner name, taxpayer name, property classification, unit count, status, or confidence label. They are not resident, service, or occupancy changes.
+      </p>
+      <p class="mt-3 text-sm font-semibold text-ink/65">
+        {changelog.changes.length.toLocaleString()} events | Updated {formatGeneratedAt(changelog.generated_at)}
+      </p>
+    </div>
+  </section>
+
+  <DataSubnav active="changes" />
+
+  <section class="bg-white">
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      {Object.keys(changeTypeCounts).length > 0 && (
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Object.entries(changeTypeCounts).map(([eventType, count]) => (
+            <div class="rounded border border-line bg-paper p-4">
+              <p class="text-sm font-semibold text-ink/60">{formatChangeEventType(eventType)}</p>
+              <p class="mt-2 text-3xl font-bold">{count.toLocaleString()}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div class="mt-8">
+        {changelog.changes.length > 0 ? (
+          <ol class="grid gap-4">
+            {changelog.changes.map((change) => {
+              const linkedProperty = propertyById.get(change.property_id);
+              return (
+                <li class="rounded border border-line bg-paper p-4">
+                  <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <h2 class="font-bold">{change.event_date}: {formatChangeEventType(change.event_type)}</h2>
+                    <a class="text-sm font-bold text-civic-green underline decoration-civic-leaf decoration-2 underline-offset-4" href={linkedProperty ? getPropertyHref(linkedProperty) : withBasePath("/properties/")}>
+                      {linkedProperty?.canonical_address || change.property_id}
+                    </a>
+                  </div>
+                  {(change.old_value || change.new_value) && (
+                    <p class="mt-2 text-sm text-ink/65">
+                      {change.old_value || "Not listed"} to {change.new_value || "Not listed"}
+                    </p>
+                  )}
+                  {change.public_note && (
+                    <p class="mt-2 text-sm text-ink/65">{change.public_note}</p>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <div class="rounded border border-line bg-paper p-6">
+            <h2 class="text-xl font-bold">No property characteristic changes are currently published</h2>
+            <p class="mt-2 text-ink/70">
+              Check back after the next data update.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+</Layout>

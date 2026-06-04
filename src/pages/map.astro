@@ -1,0 +1,27 @@
+---
+import Layout from "@components/Layout.astro";
+import PropertyMap from "@components/map/PropertyMap";
+import { formatGeneratedAt, getPropertiesPayload } from "@lib/properties";
+import { withBasePath } from "@lib/urls";
+
+const payload = await getPropertiesPayload();
+const styleUrl = withBasePath(import.meta.env.PUBLIC_BASEMAP_STYLE_URL ?? "/data/map-style.json");
+---
+
+<Layout title="Map | Minneapolis Scattered-Site Housing Explorer" description="Map of Minneapolis scattered-site housing property records.">
+  <section class="bg-paper px-4 py-6 sm:px-6 lg:px-8">
+    <div class="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <h1 class="text-3xl font-bold">Map</h1>
+        <p class="mt-2 max-w-3xl text-ink/70">
+          View mapped property records across Minneapolis. Select a point to open the full property record.
+        </p>
+      </div>
+      <p class="text-sm font-semibold text-ink/65">
+        {payload.properties.length.toLocaleString()} records | Updated {formatGeneratedAt(payload.generated_at)}
+      </p>
+    </div>
+  </section>
+
+  <PropertyMap client:only="react" dataUrl={withBasePath("/data/properties.geojson")} styleUrl={styleUrl} />
+</Layout>

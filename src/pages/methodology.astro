@@ -1,0 +1,66 @@
+---
+import Layout from "@components/Layout.astro";
+import { confidenceDefinitions } from "@lib/confidence";
+---
+
+<Layout title="Methodology | Minneapolis Scattered-Site Housing Explorer" description="How scattered-site housing records are compiled and categorized.">
+  <section class="border-b border-line bg-paper">
+    <div class="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
+      <h1 class="text-3xl font-bold">Methodology</h1>
+      <p class="mt-4 text-lg leading-8 text-ink/75">
+        This site compiles public records that identify or suggest Minneapolis scattered-site housing properties, then labels each record according to the strength of the available evidence.
+      </p>
+    </div>
+  </section>
+
+  <section class="bg-white">
+    <div class="mx-auto grid max-w-4xl gap-8 px-4 py-8 sm:px-6 lg:px-8">
+      <article>
+        <h2 class="text-2xl font-bold">Sources Used</h2>
+        <p class="mt-3 text-ink/70">
+          Records are drawn from official or documented public sources, including HUD public housing building records, City of Minneapolis assessing records, Hennepin/MetroGIS parcel records, City of Minneapolis Construction and Code Services permit records, and MPHA public portfolio information.
+        </p>
+      </article>
+
+      <article>
+        <h2 class="text-2xl font-bold">How Records Are Matched</h2>
+        <p class="mt-3 text-ink/70">
+          Parcel IDs, addresses, owner names, taxpayer names, property classifications, unit counts, and coordinates are standardized so records from different agencies can be compared. Each property keeps evidence notes that explain which public sources support the record.
+        </p>
+      </article>
+
+      <article>
+        <h2 class="text-2xl font-bold">Parcel Facts And Permits</h2>
+        <p class="mt-3 text-ink/70">
+          Parcel facts are condensed from the current MetroGIS open parcel layer and the latest Minneapolis assessing table into property-facts.csv and property-facts.json. Construction permits are landed as a full public source snapshot, then matched to exported properties by normalized parcel APN after extraction and published as property-permits.csv and property-permits.json. The public permit output includes permit numbers, type, status, value, issue and completion dates, unit changes, and work comments.
+        </p>
+      </article>
+
+      <article>
+        <h2 class="text-2xl font-bold">Privacy Boundary</h2>
+        <p class="mt-3 text-ink/70">
+          This site publishes property-level public-record context only. It does not collect or publish resident names, tenant records, household details, occupancy details tied to people, applicant contact fields, phone numbers, emails, or applicant addresses from permit records.
+        </p>
+      </article>
+
+      <article>
+        <h2 class="text-2xl font-bold">Confidence Rules</h2>
+        <div class="mt-4 grid gap-3">
+          {Object.entries(confidenceDefinitions).map(([, definition]) => (
+            <div class="rounded border border-line bg-paper p-4">
+              <h3 class="font-bold">{definition.label}</h3>
+              <p class="mt-2 text-ink/70">{definition.description}</p>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <article>
+        <h2 class="text-2xl font-bold">Known Limitations</h2>
+        <p class="mt-3 text-ink/70">
+          Public records can disagree, lag behind recent transactions, or describe ownership without directly identifying scattered-site use. Permit and parcel enrichment explains public context for a parcel, but it does not independently prove scattered-site status. Properties labeled likely should be reviewed against the cited sources before being treated as confirmed.
+        </p>
+      </article>
+    </div>
+  </section>
+</Layout>

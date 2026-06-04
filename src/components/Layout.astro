@@ -1,0 +1,63 @@
+---
+import "../styles/global.css";
+import { withBasePath } from "@lib/urls";
+
+const {
+  title = "Minneapolis Scattered-Site Housing Explorer",
+  description = "Explore public records for Minneapolis scattered-site housing properties."
+} = Astro.props as {
+  title?: string;
+  description?: string;
+};
+
+const navItems = [
+  { href: withBasePath("/"), label: "Home" },
+  { href: withBasePath("/map/"), label: "Map" },
+  { href: withBasePath("/properties/"), label: "Properties" },
+  { href: withBasePath("/methodology/"), label: "Methodology" },
+  { href: withBasePath("/data/"), label: "Data" }
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header class="border-b border-line bg-paper/95">
+      <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+        <a href={withBasePath("/")} class="max-w-xl">
+          <span class="block text-base font-bold text-ink">Minneapolis Scattered-Site Housing Explorer</span>
+          <span class="block text-sm text-ink/65">Property records, parcels, sources, and lineage</span>
+        </a>
+        <nav aria-label="Primary navigation">
+          <ul class="flex flex-wrap gap-2 text-sm font-semibold text-ink/75">
+            {navItems.map((item) => (
+              <li>
+                <a
+                  class="rounded px-3 py-2 hover:bg-white hover:text-civic-green"
+                  href={item.href}
+                >
+                  {item.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="border-t border-line bg-white">
+      <div class="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-6 text-sm text-ink/65 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+        <p>Compiled from public property and housing records.</p>
+        <p>Questions or corrections should be checked against the cited public sources.</p>
+      </div>
+    </footer>
+  </body>
+</html>

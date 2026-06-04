@@ -1,0 +1,264 @@
+---
+import Layout from "@components/Layout.astro";
+import ConfidenceBadge from "@components/ConfidenceBadge.astro";
+import {
+  formatCurrency,
+  formatClaimType,
+  formatChangeEventType,
+  formatNumber,
+  formatPublicDate,
+  getMinneapolisParcelUrl,
+  getProperties,
+  getPropertyFactByPropertyId,
+  getPropertyHistory,
+  getPropertyPermitsByPropertyId,
+  getSources,
+  type PropertyRecord
+} from "@lib/properties";
+import { withBasePath } from "@lib/urls";
+
+export async function getStaticPaths() {
+  const properties = await getProperties();
+  return properties.map((property) => ({
+    params: { id: property.detail_url_slug || property.property_id },
+    props: { property }
+  }));
+}
+
+const { property } = Astro.props as { property: PropertyRecord };
+const sources = await getSources();
+const history = await getPropertyHistory();
+const evidence = sources.property_evidence.filter(
+  (item) => item.property_id === property.property_id
+);
+const sourceById = new Map(sources.source_records.map((source) => [source.source_id, source]));
+const versions = history.property_versions.filter(
+  (version) =>
+    typeof version === "object" &&
+    version !== null &&
+    "property_id" in version &&
+    version.property_id === property.property_id
+);
+const changes = history.change_events.filter(
+  (change) => change.property_id === property.property_id
+);
+const parcelUrl = getMinneapolisParcelUrl(property.parcel_id);
+const propertyFact = await getPropertyFactByPropertyId(property.property_id);
+const propertyPermits = await getPropertyPermitsByPropertyId(property.property_id);
+const visiblePermits = propertyPermits.slice(0, 8);
+
+function hasValue(value: unknown): boolean {
+  return value !== null && value !== undefined && value !== "";
+}
+
+function displayText(value: unknown): string {
+  return hasValue(value) ? String(value) : "Not listed";
+}
+
+function displayArea(value: number | string | null | undefined): string {
+  return hasValue(value) ? `${formatNumber(value)} sq ft` : "Not listed";
+}
+
+function displayAcres(value: number | string | null | undefined): string {
+  return hasValue(value) ? `${formatNumber(value)} acres` : "Not listed";
+}
+
+const factRows = propertyFact
+  ? [
+      { label: "Sale Date", value: formatPublicDate(propertyFact.sale_date) },
+      { label: "Sale Value", value: formatCurrency(propertyFact.sale_value) },
+      { label: "Assessed Land", value: formatCurrency(propertyFact.assessed_land_value) },
+      { label: "Assessed Building", value: formatCurrency(propertyFact.assessed_building_value) },
+      { label: "Assessed Total", value: formatCurrency(propertyFact.assessed_total_value) },
+      { label: "Tax Year", value: displayText(propertyFact.tax_year) },
+      { label: "Market Year", value: displayText(propertyFact.market_year) },
+      { label: "Total Tax", value: formatCurrency(propertyFact.total_tax) },
+      { label: "Use Classes", value: displayText(propertyFact.use_classes) },
+      { label: "Zoning", value: displayText(propertyFact.zoning) },
+      { label: "Land Use", value: displayText(propertyFact.land_use) },
+      { label: "Parcel Area", value: displayArea(propertyFact.parcel_area_sqft) },
+      { label: "Acres", value: displayAcres(propertyFact.acres) },
+      { label: "Year Built", value: displayText(propertyFact.year_built) },
+      { label: "Finished Area", value: displayArea(propertyFact.finished_sqft) },
+      { label: "Above Ground Area", value: displayArea(propertyFact.above_ground_area) },
+      { label: "Below Ground Area", value: displayArea(propertyFact.below_ground_area) },
+      { label: "Total Units", value: displayText(propertyFact.total_units) },
+      { label: "Building Use", value: displayText(propertyFact.building_use) }
+    ]
+  : [];
+---
+
+<Layout title={`${property.canonical_address || property.property_id} | Minneapolis Scattered-Site Housing Explorer`} description="Public record detail page for a scattered-site housing property.">
+  <section class="border-b border-line bg-paper">
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <a class="text-sm font-bold text-civic-green underline decoration-civic-leaf decoration-2 underline-offset-4" href={withBasePath("/properties/")}>
+        Back to properties
+      </a>
+      <div class="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h1 class="text-3xl font-bold">{property.canonical_address || "Address unavailable"}</h1>
+          <p class="mt-2 text-ink/70">
+            {[property.city, property.state, property.zip].filter(Boolean).join(", ")}
+          </p>
+        </div>
+        <ConfidenceBadge level={property.confidence_level} score={property.confidence_score} />
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-white">
+    <div class="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_360px] lg:px-8">
+      <div class="space-y-8">
+        <section>
+          <h2 class="text-2xl font-bold">Property Details</h2>
+          <dl class="mt-4 grid gap-4 rounded border border-line bg-paper p-4 sm:grid-cols-2">
+            <div><dt class="font-semibold text-ink/60">Property ID</dt><dd>{property.property_id}</dd></div>
+            <div>
+              <dt class="font-semibold text-ink/60">Parcel ID</dt>
+              <dd>
+                {parcelUrl ? (
+                  <a class="font-semibold text-civic-green underline decoration-civic-leaf decoration-2 underline-offset-4" href={parcelUrl} target="_blank" rel="noreferrer">
+                    {property.parcel_id}
+                  </a>
+                ) : (
+                  "Not listed"
+                )}
+              </dd>
+            </div>
+            <div><dt class="font-semibold text-ink/60">Owner</dt><dd>{property.current_owner_name || "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Taxpayer</dt><dd>{property.current_taxpayer_name || "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Property Type</dt><dd>{property.property_type || "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Estimated Units</dt><dd>{property.estimated_unit_count ?? "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Current Status</dt><dd>{property.current_status || "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Current Record</dt><dd>{property.is_current ? "Yes" : "No"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">First Seen</dt><dd>{property.first_seen_date || "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Last Seen</dt><dd>{property.last_seen_date || "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Latitude</dt><dd>{property.latitude ?? "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Longitude</dt><dd>{property.longitude ?? "Not listed"}</dd></div>
+          </dl>
+          {property.public_notes && <p class="mt-4 rounded border border-line p-4 text-ink/75">{property.public_notes}</p>}
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold">Parcel Facts</h2>
+          {propertyFact ? (
+            <dl class="mt-4 grid gap-4 rounded border border-line bg-paper p-4 sm:grid-cols-2">
+              {factRows.map((row) => (
+                <div>
+                  <dt class="font-semibold text-ink/60">{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p class="mt-4 rounded border border-line bg-paper p-4 text-ink/70">No parcel fact enrichment was exported for this property.</p>
+          )}
+        </section>
+
+        <section>
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <h2 class="text-2xl font-bold">Construction Permits</h2>
+            {propertyPermits.length > visiblePermits.length && (
+              <p class="text-sm font-semibold text-ink/60">
+                Showing latest {visiblePermits.length.toLocaleString()} of {propertyPermits.length.toLocaleString()}
+              </p>
+            )}
+          </div>
+          {visiblePermits.length > 0 ? (
+            <div class="mt-4 grid gap-3">
+              {visiblePermits.map((permit) => (
+                <article class="rounded border border-line p-4">
+                  <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 class="font-bold">{permit.permit_number || "Permit number not listed"}</h3>
+                      <p class="mt-1 text-sm font-semibold text-ink/65">
+                        {[permit.permit_type, permit.work_type, permit.occupancy_type].filter(Boolean).join(" | ") || "Permit type not listed"}
+                      </p>
+                    </div>
+                    <span class="text-sm font-semibold text-ink/60">{formatCurrency(permit.value)}</span>
+                  </div>
+                  <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                    <div><dt class="font-semibold text-ink/60">Status</dt><dd>{permit.status || "Not listed"}</dd></div>
+                    <div><dt class="font-semibold text-ink/60">Milestone</dt><dd>{permit.milestone || "Not listed"}</dd></div>
+                    <div><dt class="font-semibold text-ink/60">Issued</dt><dd>{formatPublicDate(permit.issue_date)}</dd></div>
+                    <div><dt class="font-semibold text-ink/60">Completed</dt><dd>{formatPublicDate(permit.complete_date)}</dd></div>
+                    <div><dt class="font-semibold text-ink/60">New Units</dt><dd>{displayText(permit.dwelling_units_new)}</dd></div>
+                    <div><dt class="font-semibold text-ink/60">Units Eliminated</dt><dd>{displayText(permit.dwelling_units_eliminated)}</dd></div>
+                  </dl>
+                  {permit.work_description && <p class="mt-3 text-sm text-ink/70">{permit.work_description}</p>}
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p class="mt-4 rounded border border-line bg-paper p-4 text-ink/70">
+              No construction permits matched this property by parcel APN in the exported Minneapolis permit snapshot.
+            </p>
+          )}
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold">Evidence</h2>
+          {evidence.length > 0 ? (
+            <div class="mt-4 grid gap-3">
+              {evidence.map((item) => {
+                const source = sourceById.get(item.source_id);
+                return (
+                  <article class="rounded border border-line p-4">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <h3 class="font-bold">{formatClaimType(item.claim_type)}</h3>
+                      <span class="text-sm font-semibold text-ink/60">{Math.round(item.confidence_contribution * 100)}%</span>
+                    </div>
+                    {item.claim_value && <p class="mt-1 text-sm font-semibold text-ink/65">{item.claim_value}</p>}
+                    <p class="mt-2 text-sm text-ink/70">{item.evidence_note || "No evidence note provided."}</p>
+                    {source && (
+                      <p class="mt-2 text-sm">
+                        Source: {source.source_url ? (
+                          <a class="font-semibold text-civic-green underline decoration-civic-leaf decoration-2 underline-offset-4" href={source.source_url}>
+                            {source.public_citation_text || source.source_name}
+                          </a>
+                        ) : (
+                          <span class="font-semibold">{source.public_citation_text || source.source_name}</span>
+                        )}
+                      </p>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <p class="mt-4 rounded border border-line bg-paper p-4 text-ink/70">No evidence records were exported for this property.</p>
+          )}
+        </section>
+      </div>
+
+      <aside class="space-y-6">
+        <section class="rounded border border-line bg-paper p-4">
+          <h2 class="text-lg font-bold">History</h2>
+          <p class="mt-2 text-sm text-ink/70">
+            {versions.length.toLocaleString()} record version{versions.length === 1 ? "" : "s"} and {changes.length.toLocaleString()} public-record change{changes.length === 1 ? "" : "s"} are available for this property.
+          </p>
+          {changes.length > 0 && (
+            <ul class="mt-3 space-y-2 text-sm">
+              {changes.map((change) => (
+                <li>
+                  <strong>{change.event_date}</strong>: {formatChangeEventType(change.event_type)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        {parcelUrl && (
+          <section class="rounded border border-line bg-paper p-4">
+            <h2 class="text-lg font-bold">Official Parcel Record</h2>
+            <p class="mt-2 text-sm text-ink/70">
+              Review the City of Minneapolis property information record for this parcel.
+            </p>
+            <a class="mt-3 inline-flex rounded bg-civic-green px-3 py-2 text-sm font-bold text-white hover:bg-civic-green/90" href={parcelUrl} target="_blank" rel="noreferrer">
+              Open parcel record
+            </a>
+          </section>
+        )}
+      </aside>
+    </div>
+  </section>
+</Layout>

@@ -1,0 +1,40 @@
+---
+import { withBasePath } from "@lib/urls";
+
+const { active = "downloads" } = Astro.props as {
+  active?: "downloads" | "lineage" | "sources" | "changes";
+};
+
+const tabs = [
+  { href: withBasePath("/data/#downloads"), label: "Downloads", key: "downloads" },
+  { href: withBasePath("/data/#lineage"), label: "Lineage", key: "lineage" },
+  { href: withBasePath("/data/#sources"), label: "Sources", key: "sources" },
+  {
+    href: withBasePath("/data/property-characteristics-changes/"),
+    label: "Property Characteristics Changes",
+    key: "changes"
+  }
+];
+---
+
+<nav class="border-b border-line bg-white" aria-label="Data navigation">
+  <div class="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 text-sm font-semibold sm:px-6 lg:px-8">
+    {tabs.map((tab) => {
+      const isActive = tab.key === active;
+      return (
+        <a
+          aria-current={isActive ? "page" : undefined}
+          class:list={[
+            "whitespace-nowrap rounded border px-3 py-2",
+            isActive
+              ? "border-civic-green bg-civic-green text-white"
+              : "border-line bg-paper text-ink/75 hover:border-civic-green hover:text-civic-green"
+          ]}
+          href={tab.href}
+        >
+          {tab.label}
+        </a>
+      );
+    })}
+  </div>
+</nav>

@@ -1,0 +1,64 @@
+---
+import ConfidenceBadge from "./ConfidenceBadge.astro";
+import { getMinneapolisParcelUrl, getPropertyHref, type PropertyRecord } from "@lib/properties";
+
+const { property } = Astro.props as { property: PropertyRecord };
+const href = getPropertyHref(property);
+const parcelUrl = getMinneapolisParcelUrl(property.parcel_id);
+const searchable = [
+  property.canonical_address,
+  property.parcel_id,
+  property.current_owner_name,
+  property.current_taxpayer_name,
+  property.current_status,
+  property.confidence_level
+]
+  .join(" ")
+  .toLowerCase();
+---
+
+<article
+  class="rounded border border-line bg-white p-4 shadow-sm"
+  data-property-card
+  data-confidence={property.confidence_level}
+  data-search={searchable}
+>
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <a class="text-lg font-semibold text-ink underline decoration-civic-leaf decoration-2 underline-offset-4 hover:text-civic-green" href={href}>
+        {property.canonical_address || "Address unavailable"}
+      </a>
+      <p class="mt-1 text-sm text-ink/70">
+        {[property.city, property.state, property.zip].filter(Boolean).join(", ")}
+      </p>
+    </div>
+    <ConfidenceBadge level={property.confidence_level} score={property.confidence_score} />
+  </div>
+
+  <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+    <div>
+      <dt class="font-semibold text-ink/60">Parcel</dt>
+      <dd>
+        {parcelUrl ? (
+          <a class="font-semibold text-civic-green underline decoration-civic-leaf decoration-2 underline-offset-4" href={parcelUrl} target="_blank" rel="noreferrer">
+            {property.parcel_id}
+          </a>
+        ) : (
+          "Not listed"
+        )}
+      </dd>
+    </div>
+    <div>
+      <dt class="font-semibold text-ink/60">Owner</dt>
+      <dd>{property.current_owner_name || "Not listed"}</dd>
+    </div>
+    <div>
+      <dt class="font-semibold text-ink/60">Status</dt>
+      <dd>{property.current_status || "Not listed"}</dd>
+    </div>
+    <div>
+      <dt class="font-semibold text-ink/60">Units</dt>
+      <dd>{property.estimated_unit_count ?? "Not listed"}</dd>
+    </div>
+  </dl>
+</article>

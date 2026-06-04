@@ -1,0 +1,17 @@
+{
+  "run_id": "20260603T212113Z",
+  "started_at": "2026-06-03T21:21:13Z",
+  "completed_at": "2026-06-03T21:21:14Z",
+  "status": "success",
+  "git_commit": "",
+  "row_counts": {
+    "properties": 738,
+    "property_versions": 738,
+    "source_records": 7,
+    "property_evidence": 3486,
+    "change_events": 2764,
+    "property_facts": 735,
+    "property_permits": 1585
+  },
+  "warnings": []
+}
