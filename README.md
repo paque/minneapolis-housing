@@ -122,6 +122,18 @@ Optional environment variable:
 
 - `PUBLIC_BASEMAP_STYLE_URL`: URL/path to a MapLibre style JSON. Defaults to `/data/map-style.json`, a static blank style that does not call a live tile service.
 
+## GitHub Hosting
+
+Repository: `paque/minneapolis-housing`
+
+Branch flow:
+
+- `main`: production branch.
+- `develop`: integration branch.
+- Feature, data, and workflow changes should branch from `develop`, merge back to `develop`, then promote to `main`.
+
+The GitHub Pages workflow is present at `.github/workflows/deploy-pages.yml` and deploys the Astro `dist` output through GitHub Actions. For a private personal repository, GitHub Pages requires a GitHub plan that supports Pages on private repos. Until that is available, the workflow is manual-only to avoid failing on every `main` push.
+
 ## Privacy Boundary
 
 This is property-level public-records work only. Do not collect or publish resident-level or tenant-level information.
