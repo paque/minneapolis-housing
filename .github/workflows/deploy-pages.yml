@@ -1,10 +1,10 @@
 name: Deploy GitHub Pages
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-
-# Add a push trigger for main after GitHub Pages is available for this
-# private repository or after the repository is made public.
 
 permissions:
   contents: read

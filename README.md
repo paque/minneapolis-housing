@@ -132,7 +132,7 @@ Branch flow:
 - `develop`: integration branch.
 - Feature, data, and workflow changes should branch from `develop`, merge back to `develop`, then promote to `main`.
 
-The GitHub Pages workflow is present at `.github/workflows/deploy-pages.yml` and deploys the Astro `dist` output through GitHub Actions. For a private personal repository, GitHub Pages requires a GitHub plan that supports Pages on private repos. Until that is available, the workflow is manual-only to avoid failing on every `main` push.
+The GitHub Pages workflow is present at `.github/workflows/deploy-pages.yml` and deploys the Astro `dist` output through GitHub Actions on each push to `main`.
 
 ## Privacy Boundary
 
