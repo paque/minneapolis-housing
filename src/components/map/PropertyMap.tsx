@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { withBasePath } from "@lib/urls";
 
 type PropertyMapProps = {
   dataUrl: string;
@@ -146,7 +147,7 @@ export default function PropertyMap({ dataUrl, styleUrl }: PropertyMapProps) {
           popupContent.append(meta);
 
           const link = document.createElement("a");
-          link.href = `/properties/${slug}/`;
+          link.href = withBasePath(`/properties/${slug}/`);
           link.className = "font-bold text-civic-green underline";
           link.textContent = "Open property record";
           popupContent.append(link);
