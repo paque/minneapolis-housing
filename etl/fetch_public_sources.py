@@ -12,6 +12,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -24,6 +25,7 @@ from models import (
     PROPERTY_EVIDENCE_FIELDS,
     PROPERTY_PERMIT_FIELDS,
     PROPERTY_SOURCE_REQUIRED_FIELDS,
+    SCHEMA_VERSION,
     SOURCE_RECORD_FIELDS,
 )
 from normalize import clean_text, normalize_address, normalize_parcel_id, slugify
@@ -43,6 +45,30 @@ CCS_PERMITS_LAYER_URL = (
     "CCS_Permits/FeatureServer/0"
 )
 CCS_PERMITS_URL = f"{CCS_PERMITS_LAYER_URL}/query"
+WARD_LAYER_URL = (
+    "https://services.arcgis.com/afSMGVsC7QlRK1kZ/ArcGIS/rest/services/"
+    "CityCouncilWards_WebEOC/FeatureServer/0"
+)
+NEIGHBORHOOD_LAYER_URL = (
+    "https://services.arcgis.com/afSMGVsC7QlRK1kZ/ArcGIS/rest/services/"
+    "Minneapolis_Neighborhoods/FeatureServer/0"
+)
+COMMUNITY_LAYER_URL = (
+    "https://services.arcgis.com/afSMGVsC7QlRK1kZ/ArcGIS/rest/services/"
+    "Minneapolis_Communities/FeatureServer/0"
+)
+POLICE_PRECINCT_LAYER_URL = (
+    "https://services.arcgis.com/afSMGVsC7QlRK1kZ/ArcGIS/rest/services/"
+    "Police_Precincts/FeatureServer/0"
+)
+MPD_SECTOR_LAYER_URL = (
+    "https://services.arcgis.com/afSMGVsC7QlRK1kZ/arcgis/rest/services/"
+    "MPD_Sectors/FeatureServer/0"
+)
+CITY_LIMITS_LAYER_URL = (
+    "https://services.arcgis.com/afSMGVsC7QlRK1kZ/arcgis/rest/services/"
+    "msvcGIS_MinneapolisCityLimits/FeatureServer/0"
+)
 MPHA_PROPERTIES_URL = "https://mphaonline.org/properties/"
 
 SOURCE_SNAPSHOT_DIR = "source-snapshots"
@@ -68,6 +94,16 @@ class ArcGISSource:
 
 
 @dataclass(frozen=True)
+class CivicBoundaryLayer:
+    source_id: str
+    layer_id: str
+    layer_name: str
+    property_field: str
+    name_fields: tuple[str, ...]
+    label_prefix: str = ""
+
+
+@dataclass(frozen=True)
 class AssessingRecord:
     source_id: str
     year: int
@@ -86,6 +122,20 @@ class AssessingRecord:
     raw_x: float | None
     raw_y: float | None
     raw: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class MphaPortfolioRecord:
+    name: str
+    listed_address: str
+    amp: str
+    property_type: str
+    unit_count_text: str
+    unit_count: int | None
+    built_year: int | None
+    source_url: str
+    listing_text: str
+    retrieved_at: str
 
 
 ASSESSING_SOURCES = [
@@ -154,6 +204,147 @@ ASSESSING_SOURCES = [
     ),
 ]
 
+CIVIC_BOUNDARY_SOURCES = [
+    ArcGISSource(
+        source_id="minneapolis_city_council_wards",
+        source_name="City Council Wards",
+        source_agency="City of Minneapolis",
+        source_type="ArcGIS FeatureServer",
+        layer_url=WARD_LAYER_URL,
+        query_url=f"{WARD_LAYER_URL}/query",
+        raw_filename="minneapolis_city_council_wards.jsonl",
+        where="1=1",
+        out_fields="*",
+        return_geometry=True,
+        page_size=2000,
+        record_date="",
+        public_citation_text="City of Minneapolis City Council ward boundary FeatureServer.",
+    ),
+    ArcGISSource(
+        source_id="minneapolis_neighborhoods",
+        source_name="Minneapolis Neighborhoods",
+        source_agency="City of Minneapolis",
+        source_type="ArcGIS FeatureServer",
+        layer_url=NEIGHBORHOOD_LAYER_URL,
+        query_url=f"{NEIGHBORHOOD_LAYER_URL}/query",
+        raw_filename="minneapolis_neighborhoods.jsonl",
+        where="1=1",
+        out_fields="*",
+        return_geometry=True,
+        page_size=1000,
+        record_date="",
+        public_citation_text="City of Minneapolis neighborhood boundary FeatureServer.",
+    ),
+    ArcGISSource(
+        source_id="minneapolis_communities",
+        source_name="Minneapolis Communities",
+        source_agency="City of Minneapolis",
+        source_type="ArcGIS FeatureServer",
+        layer_url=COMMUNITY_LAYER_URL,
+        query_url=f"{COMMUNITY_LAYER_URL}/query",
+        raw_filename="minneapolis_communities.jsonl",
+        where="1=1",
+        out_fields="*",
+        return_geometry=True,
+        page_size=2000,
+        record_date="",
+        public_citation_text="City of Minneapolis community boundary FeatureServer.",
+    ),
+    ArcGISSource(
+        source_id="minneapolis_police_precincts",
+        source_name="Police Precincts",
+        source_agency="City of Minneapolis Police Department",
+        source_type="ArcGIS FeatureServer",
+        layer_url=POLICE_PRECINCT_LAYER_URL,
+        query_url=f"{POLICE_PRECINCT_LAYER_URL}/query",
+        raw_filename="minneapolis_police_precincts.jsonl",
+        where="1=1",
+        out_fields="*",
+        return_geometry=True,
+        page_size=1000,
+        record_date="",
+        public_citation_text="City of Minneapolis Police Department precinct boundary FeatureServer.",
+    ),
+    ArcGISSource(
+        source_id="minneapolis_mpd_sectors",
+        source_name="MPD Sectors",
+        source_agency="City of Minneapolis Police Department",
+        source_type="ArcGIS FeatureServer",
+        layer_url=MPD_SECTOR_LAYER_URL,
+        query_url=f"{MPD_SECTOR_LAYER_URL}/query",
+        raw_filename="minneapolis_mpd_sectors.jsonl",
+        where="1=1",
+        out_fields="*",
+        return_geometry=True,
+        page_size=1000,
+        record_date="",
+        public_citation_text="City of Minneapolis Police Department sector boundary FeatureServer.",
+    ),
+    ArcGISSource(
+        source_id="minneapolis_city_limits",
+        source_name="Minneapolis City Limits",
+        source_agency="City of Minneapolis",
+        source_type="ArcGIS FeatureServer",
+        layer_url=CITY_LIMITS_LAYER_URL,
+        query_url=f"{CITY_LIMITS_LAYER_URL}/query",
+        raw_filename="minneapolis_city_limits.jsonl",
+        where="1=1",
+        out_fields="*",
+        return_geometry=True,
+        page_size=1000,
+        record_date="",
+        public_citation_text="City of Minneapolis city limits boundary FeatureServer.",
+    ),
+]
+
+CIVIC_BOUNDARY_LAYERS = [
+    CivicBoundaryLayer(
+        source_id="minneapolis_city_limits",
+        layer_id="city_limits",
+        layer_name="City Limits",
+        property_field="city_limit",
+        name_fields=("NAME",),
+    ),
+    CivicBoundaryLayer(
+        source_id="minneapolis_city_council_wards",
+        layer_id="wards",
+        layer_name="City Council Wards",
+        property_field="ward",
+        name_fields=("BDNUM", "WARD", "Ward"),
+        label_prefix="Ward ",
+    ),
+    CivicBoundaryLayer(
+        source_id="minneapolis_neighborhoods",
+        layer_id="neighborhoods",
+        layer_name="Neighborhoods",
+        property_field="neighborhood",
+        name_fields=("BDNAME", "NEIGHBORHOOD", "NBRHD", "NAME"),
+    ),
+    CivicBoundaryLayer(
+        source_id="minneapolis_communities",
+        layer_id="communities",
+        layer_name="Communities",
+        property_field="community",
+        name_fields=("CommName", "COMMNAME", "BDNAME", "COMMUNITY", "COMMUNITY_NAME", "NAME"),
+    ),
+    CivicBoundaryLayer(
+        source_id="minneapolis_police_precincts",
+        layer_id="police_precincts",
+        layer_name="Police Precincts",
+        property_field="police_precinct",
+        name_fields=("PRECINCT", "PCT", "PCTNUM", "BDNUM", "BDNAME", "NAME"),
+        label_prefix="Precinct ",
+    ),
+    CivicBoundaryLayer(
+        source_id="minneapolis_mpd_sectors",
+        layer_id="police_sectors",
+        layer_name="MPD Sectors",
+        property_field="police_sector",
+        name_fields=("SECTOR", "sector", "MPD_SECTOR", "BDNAME", "NAME"),
+        label_prefix="Sector ",
+    ),
+]
+
 RAW_SOURCES = [
     ArcGISSource(
         source_id="hud_public_housing_buildings_mn002",
@@ -200,14 +391,21 @@ RAW_SOURCES = [
         record_date="",
         public_citation_text="City of Minneapolis Construction and Code Services permit records matched to parcels by APN.",
     ),
+    *CIVIC_BOUNDARY_SOURCES,
     *ASSESSING_SOURCES,
 ]
 
 DIRECT_SCATTERED_SITE_DEVELOPMENT = "MN002000002"
 CCS_PERMITS_SOURCE_ID = "minneapolis_ccs_permits_current"
+MPHA_PROPERTIES_SOURCE_ID = "mpha_properties_overview"
+MPHA_PROPERTIES_RAW_FILENAME = "mpha_properties_overview.jsonl"
 NAME_MATCH_RE = re.compile(
-    r"\b(COMMUNITY\s+HOUSING\s+RESOURCES?|MPLS\s+PUBLIC\s+HOUSING|"
-    r"MINNEAPOLIS\s+PUBLIC\s+HOUSING|PUBLIC\s+HOUSING\s+AUTH(?:ORITY)?|MPHA)\b"
+    r"\b(COMMUNITY\s+HOUSING\s+RESOURCES?|MPLS\s+PUBLIC\s+(?:HOUSING|HSG)|"
+    r"MINNEAPOLIS\s+PUBLIC\s+HOUSING|PUBLIC\s+(?:HOUSING|HSG)\s+(?:AUTH(?:ORITY|Y)?|ATHY)|MPHA)\b"
+)
+MPHA_OWNER_MATCH_RE = re.compile(
+    r"\b(MPLS\s+PUBLIC\s+(?:HOUSING|HSG)|MINNEAPOLIS\s+PUBLIC\s+HOUSING|"
+    r"PUBLIC\s+(?:HOUSING|HSG)\s+(?:AUTH(?:ORITY|Y)?|ATHY)|MPHA)\b"
 )
 EMAIL_RE = re.compile(r"\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b")
 PHONE_RE = re.compile(
@@ -225,6 +423,52 @@ EXCLUDED_BUILDING_USES = {
     "TRANSIENT NAL HSG FAC",
     "WAREHOUSE",
 }
+MPHA_PROPERTY_TYPES = (
+    "Single-Family and Multiplex Homes",
+    "Townhome Development",
+    "High-Rise",
+)
+ADDRESS_PATTERN = re.compile(
+    r"\b\d{1,5}\s+(?:[A-Za-z0-9.'-]+\s+){0,7}?"
+    r"(?:Avenue|Ave|Street|St|Boulevard|Blvd|Road|Rd|Parkway|Pkwy|Place|Pl|"
+    r"Way|Terrace|Court|Ct|Lane|Ln|Highway|Hwy)"
+    r"(?:\s+(?:North\s+East|North\s+West|South\s+East|South\s+West|"
+    r"Northeast|Northwest|Southeast|Southwest|North|South|East|West|"
+    r"NE|NW|SE|SW|N|S|E|W))?\b",
+    re.IGNORECASE,
+)
+ADDRESS_TOKEN_MAP = {
+    "AVENUE": "AVE",
+    "AVE": "AVE",
+    "STREET": "ST",
+    "ST": "ST",
+    "BOULEVARD": "BLVD",
+    "BLVD": "BLVD",
+    "ROAD": "RD",
+    "RD": "RD",
+    "PARKWAY": "PKWY",
+    "PKWY": "PKWY",
+    "PLACE": "PL",
+    "PL": "PL",
+    "TERRACE": "TER",
+    "TER": "TER",
+    "COURT": "CT",
+    "CT": "CT",
+    "LANE": "LN",
+    "LN": "LN",
+    "HIGHWAY": "HWY",
+    "HWY": "HWY",
+    "NORTH": "N",
+    "SOUTH": "S",
+    "EAST": "E",
+    "WEST": "W",
+    "NORTHEAST": "NE",
+    "NORTHWEST": "NW",
+    "SOUTHEAST": "SE",
+    "SOUTHWEST": "SW",
+}
+ADDRESS_DIRECTIONS = {"N", "S", "E", "W", "NE", "NW", "SE", "SW"}
+ADDRESS_UNIT_MARKERS = {"APT", "APARTMENT", "UNIT", "STE", "SUITE", "ROOM", "RM"}
 CHANGE_EVENT_LABELS = {
     "owner_name_changed": "an owner name change",
     "taxpayer_name_changed": "a taxpayer name change",
@@ -285,6 +529,207 @@ def request_json(url: str, params: dict[str, Any], retries: int = 3) -> dict[str
     raise RuntimeError("Request retry loop exited unexpectedly")
 
 
+def request_text(url: str, retries: int = 3) -> str:
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "minneapolis-housing-etl/0.2"},
+    )
+    for attempt in range(retries):
+        try:
+            with urllib.request.urlopen(request, timeout=90) as response:
+                charset = response.headers.get_content_charset() or "utf-8"
+                return response.read().decode(charset, errors="replace")
+        except Exception:
+            if attempt == retries - 1:
+                raise
+            time.sleep(1.5 * (attempt + 1))
+    raise RuntimeError("Request retry loop exited unexpectedly")
+
+
+class MphaPropertyLinkParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.links: list[dict[str, str]] = []
+        self._href: str | None = None
+        self._parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.lower() != "a" or self._href is not None:
+            return
+        href = dict(attrs).get("href")
+        if not href:
+            return
+        absolute_url = urllib.parse.urljoin(MPHA_PROPERTIES_URL, href)
+        path = urllib.parse.urlparse(absolute_url).path
+        if "/property/" not in path and "/mpha-housing/portfolio/" not in path:
+            return
+        self._href = absolute_url
+        self._parts = []
+
+    def handle_data(self, data: str) -> None:
+        if self._href is not None:
+            self._parts.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag.lower() != "a" or self._href is None:
+            return
+        text = clean_text(" ".join(self._parts))
+        if text:
+            self.links.append({"href": self._href, "text": text})
+        self._href = None
+        self._parts = []
+
+
+def parse_unit_count_text(value: str) -> tuple[str, int | None]:
+    match = re.search(r"\b((?:Nearly\s+)?[\d,]+)\s+Units?\b", value, flags=re.IGNORECASE)
+    if not match:
+        return "", None
+    unit_count_text = clean_text(match.group(0))
+    digits = re.sub(r"[^0-9]", "", match.group(1))
+    return unit_count_text, int(digits) if digits else None
+
+
+def normalize_mpha_listed_address(value: Any) -> str:
+    text = normalize_address(value)
+    direction_phrases = {
+        r"\bNorth\s+East\b": "Northeast",
+        r"\bNorth\s+West\b": "Northwest",
+        r"\bSouth\s+East\b": "Southeast",
+        r"\bSouth\s+West\b": "Southwest",
+    }
+    for pattern, replacement in direction_phrases.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return normalize_address(text)
+
+
+def parse_mpha_listing_text(
+    text: str,
+    *,
+    source_url: str,
+    retrieved_at: str,
+) -> MphaPortfolioRecord | None:
+    text = clean_text(text)
+    parts = re.split(r"\b(AMP\s+\d+|CHR)\b", text, maxsplit=1, flags=re.IGNORECASE)
+    if len(parts) != 3:
+        return None
+
+    before_amp, amp, after_amp = parts
+    property_type = next(
+        (
+            candidate
+            for candidate in MPHA_PROPERTY_TYPES
+            if re.search(re.escape(candidate), after_amp, flags=re.IGNORECASE)
+        ),
+        "",
+    )
+    if not property_type:
+        return None
+
+    scattered_phrase = "Located Throughout the City"
+    if scattered_phrase.lower() in before_amp.lower():
+        phrase_match = re.search(re.escape(scattered_phrase), before_amp, flags=re.IGNORECASE)
+        if not phrase_match:
+            return None
+        name = clean_text(before_amp[: phrase_match.start()])
+        listed_address = scattered_phrase
+    else:
+        address_match = ADDRESS_PATTERN.search(before_amp)
+        if not address_match:
+            return None
+        name = clean_text(before_amp[: address_match.start()])
+        listed_address = normalize_mpha_listed_address(address_match.group(0))
+
+    unit_count_text, unit_count = parse_unit_count_text(after_amp)
+    built_match = re.search(r"\bBuilt in\s+(\d{4})\b", after_amp, flags=re.IGNORECASE)
+    built_year = int(built_match.group(1)) if built_match else None
+    return MphaPortfolioRecord(
+        name=name,
+        listed_address=listed_address,
+        amp=clean_text(amp).upper(),
+        property_type=property_type,
+        unit_count_text=unit_count_text,
+        unit_count=unit_count,
+        built_year=built_year,
+        source_url=source_url,
+        listing_text=text,
+        retrieved_at=retrieved_at,
+    )
+
+
+def parse_mpha_properties_html(html: str, retrieved_at: str) -> list[MphaPortfolioRecord]:
+    parser = MphaPropertyLinkParser()
+    parser.feed(html)
+    records_by_url: dict[str, MphaPortfolioRecord] = {}
+    for link in parser.links:
+        record = parse_mpha_listing_text(
+            link["text"],
+            source_url=link["href"],
+            retrieved_at=retrieved_at,
+        )
+        if record is not None:
+            records_by_url[record.source_url] = record
+    return sorted(records_by_url.values(), key=lambda item: (item.name.lower(), item.listed_address.lower()))
+
+
+def mpha_portfolio_record_to_dict(record: MphaPortfolioRecord) -> dict[str, Any]:
+    return {
+        "name": record.name,
+        "listed_address": record.listed_address,
+        "amp": record.amp,
+        "property_type": record.property_type,
+        "unit_count_text": record.unit_count_text,
+        "unit_count": record.unit_count if record.unit_count is not None else "",
+        "built_year": record.built_year if record.built_year is not None else "",
+        "source_url": record.source_url,
+        "listing_text": record.listing_text,
+        "retrieved_at": record.retrieved_at,
+    }
+
+
+def mpha_portfolio_record_from_dict(row: dict[str, Any]) -> MphaPortfolioRecord:
+    listing_text = clean_text(row.get("listing_text"))
+    source_url = clean_text(row.get("source_url"))
+    retrieved_at = clean_text(row.get("retrieved_at"))
+    reparsed = parse_mpha_listing_text(listing_text, source_url=source_url, retrieved_at=retrieved_at) if listing_text else None
+    listed_address = (
+        reparsed.listed_address
+        if reparsed is not None and reparsed.listed_address
+        else normalize_mpha_listed_address(row.get("listed_address"))
+    )
+    return MphaPortfolioRecord(
+        name=clean_text(row.get("name")),
+        listed_address=listed_address,
+        amp=clean_text(row.get("amp")).upper(),
+        property_type=clean_text(row.get("property_type")),
+        unit_count_text=clean_text(row.get("unit_count_text")),
+        unit_count=parse_int(row.get("unit_count")),
+        built_year=parse_int(row.get("built_year")),
+        source_url=source_url,
+        listing_text=listing_text,
+        retrieved_at=retrieved_at,
+    )
+
+
+def extract_mpha_properties_overview(snapshot_dir: Path, retrieved_at: str) -> dict[str, Any]:
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    raw_path = snapshot_dir / MPHA_PROPERTIES_RAW_FILENAME
+    tmp_path = raw_path.with_suffix(raw_path.suffix + ".tmp")
+    html = request_text(MPHA_PROPERTIES_URL)
+    records = parse_mpha_properties_html(html, retrieved_at)
+    with tmp_path.open("w", encoding="utf-8") as handle:
+        for record in records:
+            handle.write(json.dumps(mpha_portfolio_record_to_dict(record), ensure_ascii=False, separators=(",", ":")) + "\n")
+    tmp_path.replace(raw_path)
+    return {
+        "source_id": MPHA_PROPERTIES_SOURCE_ID,
+        "raw_file_uri": f"data/raw/{SOURCE_SNAPSHOT_DIR}/{MPHA_PROPERTIES_RAW_FILENAME}",
+        "retrieved_at": retrieved_at,
+        "source_url": MPHA_PROPERTIES_URL,
+        "row_count": len(records),
+        "sha256_hash": hash_file(raw_path),
+    }
+
+
 def feature_attributes(feature: dict[str, Any]) -> dict[str, Any]:
     attrs = feature.get("attributes", {})
     return {**attrs, **{key.upper(): value for key, value in attrs.items()}}
@@ -332,6 +777,165 @@ def normalized_name_blob(*values: Any) -> str:
 
 def public_housing_name_matches(*values: Any) -> bool:
     return bool(NAME_MATCH_RE.search(normalized_name_blob(*values)))
+
+
+def mpha_owner_name_matches(*values: Any) -> bool:
+    return bool(MPHA_OWNER_MATCH_RE.search(normalized_name_blob(*values)))
+
+
+def address_tokens(value: Any) -> list[str]:
+    tokens = normalized_name_blob(value).split()
+    mapped = [ADDRESS_TOKEN_MAP.get(token, token) for token in tokens]
+    combined: list[str] = []
+    index = 0
+    while index < len(mapped):
+        token = mapped[index]
+        next_token = mapped[index + 1] if index + 1 < len(mapped) else ""
+        if token in {"N", "S"} and next_token in {"E", "W"}:
+            combined.append(f"{token}{next_token}")
+            index += 2
+            continue
+        combined.append(token)
+        index += 1
+    return combined
+
+
+def address_base_tokens(value: Any) -> list[str]:
+    tokens = address_tokens(value)
+    for index, token in enumerate(tokens):
+        if token in ADDRESS_UNIT_MARKERS:
+            return tokens[:index]
+    return tokens
+
+
+def address_street_key(value: Any) -> str:
+    tokens = address_base_tokens(value)
+    if tokens and re.fullmatch(r"\d+", tokens[0]):
+        tokens = tokens[1:]
+    directions = [token for token in tokens if token in ADDRESS_DIRECTIONS]
+    non_directions = [token for token in tokens if token not in ADDRESS_DIRECTIONS]
+    if directions:
+        return " ".join([*non_directions, directions[-1]])
+    return " ".join(non_directions)
+
+
+def address_full_key(value: Any) -> str:
+    tokens = address_base_tokens(value)
+    house_number = tokens[0] if tokens and re.fullmatch(r"\d+", tokens[0]) else ""
+    street_key = address_street_key(value)
+    return clean_text(f"{house_number} {street_key}")
+
+
+def address_house_number(value: Any) -> int | None:
+    tokens = address_base_tokens(value)
+    if tokens and re.fullmatch(r"\d+", tokens[0]):
+        return parse_int(tokens[0])
+    return None
+
+
+def address_directionless_street_key(value: Any) -> str:
+    tokens = address_base_tokens(value)
+    if tokens and re.fullmatch(r"\d+", tokens[0]):
+        tokens = tokens[1:]
+    return " ".join(token for token in tokens if token not in ADDRESS_DIRECTIONS)
+
+
+def address_directionless_full_key(value: Any) -> str:
+    house_number = address_house_number(value)
+    street_key = address_directionless_street_key(value)
+    return clean_text(f"{house_number or ''} {street_key}")
+
+
+def choose_portfolio_candidate(
+    record: MphaPortfolioRecord,
+    candidates: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    if not candidates:
+        return None
+
+    def score(candidate: dict[str, Any]) -> tuple[int, str]:
+        candidate_unit_count = parse_int(candidate.get("estimated_unit_count"))
+        name_score = 2 if public_housing_name_matches(candidate.get("owner_name"), candidate.get("taxpayer_name")) else 0
+        unit_score = 1 if record.unit_count is not None and candidate_unit_count == record.unit_count else 0
+        return name_score + unit_score, clean_text(candidate.get("parcel_id"))
+
+    return sorted(candidates, key=score, reverse=True)[0]
+
+
+def choose_nearby_mpha_portfolio_candidate(
+    record: MphaPortfolioRecord,
+    candidates: list[dict[str, Any]],
+    *,
+    max_house_number_delta: int = 20,
+) -> dict[str, Any] | None:
+    listed_house_number = address_house_number(record.listed_address)
+    if listed_house_number is None:
+        return None
+
+    scored_candidates: list[tuple[int, str, dict[str, Any]]] = []
+    for candidate in candidates:
+        if not mpha_owner_name_matches(candidate.get("owner_name"), candidate.get("taxpayer_name")):
+            continue
+        candidate_house_number = address_house_number(candidate.get("address"))
+        if candidate_house_number is None:
+            continue
+        distance = abs(candidate_house_number - listed_house_number)
+        if distance <= max_house_number_delta:
+            scored_candidates.append((distance, clean_text(candidate.get("parcel_id")), candidate))
+
+    if not scored_candidates:
+        return None
+    return sorted(scored_candidates, key=lambda item: (item[0], item[1]))[0][2]
+
+
+def match_mpha_portfolio_record(
+    record: MphaPortfolioRecord,
+    records_by_full_address: dict[str, list[dict[str, Any]]],
+    records_by_street: dict[str, list[dict[str, Any]]],
+    records_by_directionless_full_address: dict[str, list[dict[str, Any]]],
+    records_by_directionless_street: dict[str, list[dict[str, Any]]],
+) -> str:
+    if record.listed_address.lower() == "located throughout the city":
+        return ""
+
+    exact_candidates = records_by_full_address.get(address_full_key(record.listed_address), [])
+    exact_match = choose_portfolio_candidate(record, exact_candidates)
+    if exact_match:
+        return clean_text(exact_match.get("parcel_id"))
+
+    directionless_exact_candidates = [
+        candidate
+        for candidate in records_by_directionless_full_address.get(address_directionless_full_key(record.listed_address), [])
+        if public_housing_name_matches(candidate.get("owner_name"), candidate.get("taxpayer_name"))
+    ]
+    directionless_exact_match = choose_portfolio_candidate(record, directionless_exact_candidates)
+    if directionless_exact_match:
+        return clean_text(directionless_exact_match.get("parcel_id"))
+
+    street_candidates = [
+        candidate
+        for candidate in records_by_street.get(address_street_key(record.listed_address), [])
+        if public_housing_name_matches(candidate.get("owner_name"), candidate.get("taxpayer_name"))
+    ]
+    unit_matches = [
+        candidate
+        for candidate in street_candidates
+        if record.unit_count is not None and parse_int(candidate.get("estimated_unit_count")) == record.unit_count
+    ]
+    street_match = choose_portfolio_candidate(record, unit_matches)
+    if street_match:
+        return clean_text(street_match.get("parcel_id"))
+
+    nearby_match = choose_nearby_mpha_portfolio_candidate(
+        record,
+        records_by_directionless_street.get(address_directionless_street_key(record.listed_address), []),
+    )
+    if nearby_match:
+        return clean_text(nearby_match.get("parcel_id"))
+
+    if len(street_candidates) == 1:
+        street_match = street_candidates[0]
+    return clean_text(street_match.get("parcel_id")) if street_match else ""
 
 
 def extract_arcgis_source(
@@ -434,6 +1038,113 @@ def point_in_feature(longitude: float, latitude: float, feature: dict[str, Any])
     return False
 
 
+def civic_layer_by_source_id() -> dict[str, CivicBoundaryLayer]:
+    return {layer.source_id: layer for layer in CIVIC_BOUNDARY_LAYERS}
+
+
+def civic_boundary_name(layer: CivicBoundaryLayer, feature: dict[str, Any]) -> str:
+    attrs = feature_attributes(feature)
+    value = first_value(attrs, *layer.name_fields)
+    if not value:
+        return ""
+    if layer.label_prefix and not value.lower().startswith(layer.label_prefix.strip().lower()):
+        return f"{layer.label_prefix}{value}"
+    return value
+
+
+def read_optional_jsonl(path: Path) -> Iterable[dict[str, Any]]:
+    if not path.exists():
+        return []
+    return read_jsonl(path)
+
+
+def arcgis_polygon_to_geojson(feature: dict[str, Any]) -> dict[str, Any] | None:
+    rings = (feature.get("geometry") or {}).get("rings") or []
+    cleaned_rings = []
+    for ring in rings:
+        cleaned_ring = [
+            [float(point[0]), float(point[1])]
+            for point in ring
+            if isinstance(point, list) and len(point) >= 2 and point[0] is not None and point[1] is not None
+        ]
+        if len(cleaned_ring) >= 4:
+            cleaned_rings.append(cleaned_ring)
+    if not cleaned_rings:
+        return None
+    return {
+        "type": "Polygon",
+        "coordinates": cleaned_rings,
+    }
+
+
+def load_civic_boundary_features(snapshot_dir: Path) -> dict[str, list[dict[str, Any]]]:
+    features_by_layer: dict[str, list[dict[str, Any]]] = {}
+    sources_by_id = {source.source_id: source for source in CIVIC_BOUNDARY_SOURCES}
+    for layer in CIVIC_BOUNDARY_LAYERS:
+        source = sources_by_id[layer.source_id]
+        features_by_layer[layer.layer_id] = list(read_optional_jsonl(snapshot_dir / source.raw_filename))
+    return features_by_layer
+
+
+def civic_geography_for_point(
+    longitude: Any,
+    latitude: Any,
+    civic_features_by_layer: dict[str, list[dict[str, Any]]],
+) -> dict[str, str]:
+    lon = parse_float(longitude)
+    lat = parse_float(latitude)
+    geography = {layer.property_field: "" for layer in CIVIC_BOUNDARY_LAYERS}
+    geography["civic_geography_source_ids"] = ""
+    if lon is None or lat is None:
+        return geography
+
+    source_ids = []
+    for layer in CIVIC_BOUNDARY_LAYERS:
+        for feature in civic_features_by_layer.get(layer.layer_id, []):
+            if point_in_feature(lon, lat, feature):
+                geography[layer.property_field] = civic_boundary_name(layer, feature)
+                source_ids.append(layer.source_id)
+                break
+    geography["civic_geography_source_ids"] = "|".join(source_ids)
+    return geography
+
+
+def build_civic_boundaries_geojson(
+    civic_features_by_layer: dict[str, list[dict[str, Any]]],
+    generated_at: str,
+) -> dict[str, Any]:
+    features = []
+    for layer in CIVIC_BOUNDARY_LAYERS:
+        for feature in civic_features_by_layer.get(layer.layer_id, []):
+            geometry = arcgis_polygon_to_geojson(feature)
+            if geometry is None:
+                continue
+            name = civic_boundary_name(layer, feature)
+            features.append(
+                {
+                    "type": "Feature",
+                    "properties": {
+                        "layer_id": layer.layer_id,
+                        "layer_name": layer.layer_name,
+                        "name": name,
+                        "label": name or layer.layer_name,
+                        "source_id": layer.source_id,
+                    },
+                    "geometry": geometry,
+                }
+            )
+
+    return {
+        "type": "FeatureCollection",
+        "metadata": {
+            "schema_version": SCHEMA_VERSION,
+            "generated_at": generated_at,
+            "sources": [source.source_id for source in CIVIC_BOUNDARY_SOURCES],
+        },
+        "features": features,
+    }
+
+
 def find_parcel_for_point(
     longitude: float | None,
     latitude: float | None,
@@ -445,6 +1156,57 @@ def find_parcel_for_point(
         if point_in_feature(longitude, latitude, feature):
             return feature
     return None
+
+
+def choose_hud_address_candidate(
+    attrs: dict[str, Any],
+    candidates: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    if not candidates:
+        return None
+
+    hud_zip = clean_text(attrs.get("STD_ZIP5"))
+    same_zip_candidates = [
+        candidate
+        for candidate in candidates
+        if not hud_zip or clean_text(candidate.get("zip")) == hud_zip
+    ]
+    scoped_candidates = same_zip_candidates or candidates
+    public_housing_candidates = [
+        candidate
+        for candidate in scoped_candidates
+        if public_housing_name_matches(candidate.get("owner_name"), candidate.get("taxpayer_name"))
+    ]
+    if len(public_housing_candidates) == 1:
+        return public_housing_candidates[0]
+    if len(scoped_candidates) == 1:
+        return scoped_candidates[0]
+    return None
+
+
+def match_hud_building_record_to_parcel(
+    attrs: dict[str, Any],
+    feature: dict[str, Any],
+    records_by_full_address: dict[str, list[dict[str, Any]]],
+    parcel_features: Iterable[dict[str, Any]],
+) -> str:
+    address = normalize_address(attrs.get("STD_ADDR"))
+    address_match = choose_hud_address_candidate(
+        attrs,
+        records_by_full_address.get(address_full_key(address), []),
+    )
+    if address_match:
+        return clean_text(address_match.get("parcel_id"))
+
+    longitude = parse_float(attrs.get("LON") or (feature.get("geometry") or {}).get("x"))
+    latitude = parse_float(attrs.get("LAT") or (feature.get("geometry") or {}).get("y"))
+    parcel_feature = find_parcel_for_point(longitude, latitude, parcel_features)
+    if not parcel_feature:
+        return ""
+    point_record = state_parcel_record(parcel_feature)
+    if not public_housing_name_matches(point_record.get("owner_name"), point_record.get("taxpayer_name")):
+        return ""
+    return clean_text(point_record.get("parcel_id"))
 
 
 def parcel_address(parcel: dict[str, Any]) -> str:
@@ -581,6 +1343,142 @@ def clean_units(*values: int | None) -> int | str:
     return ""
 
 
+UNIT_INFERENCE_BY_BUILDING_USE: dict[str, tuple[int, str, str]] = {
+    "SINGLE FAMILY HOME": (
+        1,
+        "inferred",
+        "Building use indicates a single-family home; unit count inferred as 1.",
+    ),
+    "SINGLE FAMILY HOUSE": (
+        1,
+        "inferred",
+        "Building use indicates a single-family house; unit count inferred as 1.",
+    ),
+    "DUPLEX": (
+        2,
+        "inferred",
+        "Building use indicates a duplex; unit count inferred as 2.",
+    ),
+    "TRIPLEX": (
+        3,
+        "inferred",
+        "Building use indicates a triplex; unit count inferred as 3.",
+    ),
+    "FOURPLEX": (
+        4,
+        "inferred",
+        "Building use indicates a fourplex; unit count inferred as 4.",
+    ),
+    "APARTMENT 4 OR 5 UNIT": (
+        4,
+        "inferred_minimum",
+        "Building use indicates 4 or 5 units; unit count uses the conservative minimum of 4.",
+    ),
+    "APARTMENT 6+ UNIT": (
+        6,
+        "inferred_minimum",
+        "Building use indicates 6 or more units; unit count uses the conservative minimum of 6.",
+    ),
+    "ROW HOUSE": (
+        1,
+        "inferred",
+        "Building use indicates a row house parcel; unit count inferred as 1.",
+    ),
+}
+
+
+def positive_int(value: Any) -> int | None:
+    if isinstance(value, int):
+        return value if value > 0 else None
+    if isinstance(value, float):
+        return int(value) if value > 0 else None
+    parsed = parse_int(value)
+    return parsed if parsed is not None and parsed > 0 else None
+
+
+def nonnegative_int(value: Any) -> int | None:
+    if isinstance(value, int):
+        return value if value >= 0 else None
+    if isinstance(value, float):
+        return int(value) if value >= 0 else None
+    parsed = parse_int(value)
+    return parsed if parsed is not None and parsed >= 0 else None
+
+
+def infer_unit_count_from_building_use(building_use: Any) -> dict[str, Any]:
+    normalized = re.sub(r"\s+", " ", clean_text(building_use).upper())
+    if normalized not in UNIT_INFERENCE_BY_BUILDING_USE:
+        return {
+            "unit_count": None,
+            "unit_count_source": "",
+            "unit_count_confidence": "",
+            "unit_count_notes": "",
+        }
+
+    count, confidence, note = UNIT_INFERENCE_BY_BUILDING_USE[normalized]
+    return {
+        "unit_count": count,
+        "unit_count_source": "building_use_inference",
+        "unit_count_confidence": confidence,
+        "unit_count_notes": note,
+    }
+
+
+def infer_unit_count_from_property_type(property_type: Any) -> dict[str, Any]:
+    normalized = re.sub(r"\s+", " ", clean_text(property_type).upper())
+    if "VACANT LAND" not in normalized:
+        return {
+            "unit_count": None,
+            "unit_count_source": "",
+            "unit_count_confidence": "",
+            "unit_count_notes": "",
+        }
+    return {
+        "unit_count": 0,
+        "unit_count_source": "property_type_inference",
+        "unit_count_confidence": "inferred_zero",
+        "unit_count_notes": "Property type indicates vacant land; unit count inferred as 0.",
+    }
+
+
+def count_or_blank(value: Any) -> int | str:
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    parsed = parse_int(value)
+    return parsed if parsed is not None else ""
+
+
+def choose_unit_count(
+    *,
+    building_use: Any,
+    property_type: Any = "",
+    reported_counts: Iterable[tuple[str, Any]],
+) -> dict[str, Any]:
+    for source, value in reported_counts:
+        count = nonnegative_int(value)
+        if count is not None:
+            return {
+                "unit_count": count,
+                "unit_count_source": source,
+                "unit_count_confidence": "reported",
+                "unit_count_notes": f"Unit count reported by {source.replace('_', ' ')}.",
+            }
+    property_type_inference = infer_unit_count_from_property_type(property_type)
+    if property_type_inference["unit_count"] is not None:
+        return property_type_inference
+    return infer_unit_count_from_building_use(building_use)
+
+
+def assessed_value_per_unit(assessed_total_value: Any, units: Any) -> float | str:
+    value = parse_float(assessed_total_value)
+    unit_count = positive_int(units)
+    if value is None or unit_count is None:
+        return ""
+    return round(value / unit_count, 2)
+
+
 def clean_coordinate(*values: float | None) -> float | str:
     for value in values:
         if value is not None:
@@ -661,6 +1559,29 @@ def build_property_fact(
 ) -> dict[str, Any]:
     state_attrs = (state_record or {}).get("raw", {}) if state_record else {}
     assessing_attrs = latest_assessing.raw if latest_assessing else {}
+    building_use = first_clean_value(assessing_attrs, "BUILDINGUSE")
+    property_type = (latest_assessing.property_type if latest_assessing else "") or (state_record or {}).get("property_type", "")
+    assessing_total_units = first_int(assessing_attrs, "TOTALUNITS", "TOTAL_UNITS")
+    state_total_units = first_int(state_attrs, "NUM_UNITS")
+    total_units = assessing_total_units if assessing_total_units != "" else state_total_units
+    unit_count = choose_unit_count(
+        building_use=building_use,
+        property_type=property_type,
+        reported_counts=[
+            ("minneapolis_assessing_total_units", assessing_total_units),
+            ("metrogis_num_units", state_total_units),
+        ],
+    )
+    inferred_unit_count = (
+        unit_count["unit_count"]
+        if unit_count["unit_count_source"] in {"building_use_inference", "property_type_inference"}
+        else ""
+    )
+    assessed_total_value = first_float(state_attrs, "EMV_TOTAL", "TOTALVALUE", "TOTAL_VALUE") or first_float(
+        assessing_attrs,
+        "TOTALVALUE",
+        "TOTAL_VALUE",
+    )
     source_ids = []
     if state_record:
         source_ids.append("metrogis_hennepin_minneapolis_parcels_current")
@@ -677,8 +1598,7 @@ def build_property_fact(
         or first_float(assessing_attrs, "LANDVALUE", "LAND_VALUE"),
         "assessed_building_value": first_float(state_attrs, "EMV_BLDG", "BUILDINGVALUE", "BUILDING_VALUE")
         or first_float(assessing_attrs, "BUILDINGVALUE", "BUILDING_VALUE"),
-        "assessed_total_value": first_float(state_attrs, "EMV_TOTAL", "TOTALVALUE", "TOTAL_VALUE")
-        or first_float(assessing_attrs, "TOTALVALUE", "TOTAL_VALUE"),
+        "assessed_total_value": assessed_total_value,
         "tax_year": first_int(state_attrs, "TAX_YEAR") or first_int(assessing_attrs, "TAXYR", "TAX_YEAR"),
         "market_year": first_int(state_attrs, "MKT_YEAR") or first_int(assessing_attrs, "ASMTYEAR"),
         "total_tax": first_float(state_attrs, "TOTAL_TAX"),
@@ -691,8 +1611,17 @@ def build_property_fact(
         "finished_sqft": first_float(state_attrs, "FIN_SQ_FT"),
         "above_ground_area": first_float(assessing_attrs, "ABOVEGROUNDAREA", "ABOVE_GROUND_AREA"),
         "below_ground_area": first_float(assessing_attrs, "BASEMENTAREA", "BELOW_GROUND_AREA"),
-        "total_units": first_int(assessing_attrs, "TOTALUNITS", "TOTAL_UNITS") or first_int(state_attrs, "NUM_UNITS"),
-        "building_use": first_clean_value(assessing_attrs, "BUILDINGUSE"),
+        "total_units": total_units,
+        "inferred_unit_count": inferred_unit_count,
+        "best_unit_count": count_or_blank(unit_count["unit_count"]),
+        "unit_count_source": unit_count["unit_count_source"],
+        "unit_count_confidence": unit_count["unit_count_confidence"],
+        "unit_count_notes": unit_count["unit_count_notes"],
+        "assessed_value_per_unit": assessed_value_per_unit(
+            assessed_total_value,
+            unit_count["unit_count"],
+        ),
+        "building_use": building_use,
     }
 
 
@@ -738,12 +1667,14 @@ def source_date_for_property(
     assessing_records: list[AssessingRecord],
     state_record: dict[str, Any] | None,
     hud_rows: list[dict[str, Any]],
+    portfolio_rows: list[MphaPortfolioRecord],
     fallback: str,
 ) -> tuple[str, str]:
     dates = [f"{record.year}-01-01" for record in assessing_records]
     if state_record and state_record.get("record_date"):
         dates.append(str(state_record["record_date"]))
     dates.extend(date_from_epoch_ms(row.get("LAST_UPDT_DTTM")) for row in hud_rows)
+    dates.extend(clean_text(row.retrieved_at)[:10] for row in portfolio_rows if clean_text(row.retrieved_at))
     dates = sorted(date for date in dates if date)
     if not dates:
         return fallback, fallback
@@ -754,9 +1685,21 @@ def mpha_source_note(
     has_hud: bool,
     has_state: bool,
     assessing_years: list[int],
+    portfolio_rows: list[MphaPortfolioRecord],
     is_current: bool,
 ) -> str:
     notes = []
+    if portfolio_rows:
+        names = ", ".join(record.name for record in portfolio_rows if record.name)
+        listed_addresses = ", ".join(
+            record.listed_address
+            for record in portfolio_rows
+            if record.listed_address and record.listed_address.lower() != "located throughout the city"
+        )
+        if names and listed_addresses:
+            notes.append(f"MPHA's public properties page lists {names} at {listed_addresses}.")
+        elif names:
+            notes.append(f"MPHA's public properties page lists {names}.")
     if has_hud:
         notes.append("HUD directly lists this parcel/address in development MN002000002 / Scattered Sites.")
     if has_state:
@@ -797,16 +1740,19 @@ def build_sources(
         )
     source_specs.append(
         {
-            "source_id": "mpha_properties_overview",
+            "source_id": MPHA_PROPERTIES_SOURCE_ID,
             "source_name": "MPHA Properties Overview",
             "source_agency": "Minneapolis Public Housing Authority",
             "source_type": "Website",
             "source_url": MPHA_PROPERTIES_URL,
-            "retrieved_at": retrieved_at,
-            "record_date": "",
-            "raw_file_uri": "",
-            "sha256_hash": "",
-            "public_citation_text": "MPHA public properties page describing scattered-site homes as CHR single-family and multiplex homes, nearly 800 units.",
+            "retrieved_at": extracts.get(MPHA_PROPERTIES_SOURCE_ID, {}).get("retrieved_at", retrieved_at),
+            "record_date": source_dates.get(MPHA_PROPERTIES_SOURCE_ID, ""),
+            "raw_file_uri": extracts.get(
+                MPHA_PROPERTIES_SOURCE_ID,
+                {},
+            ).get("raw_file_uri", f"data/raw/{SOURCE_SNAPSHOT_DIR}/{MPHA_PROPERTIES_RAW_FILENAME}"),
+            "sha256_hash": extracts.get(MPHA_PROPERTIES_SOURCE_ID, {}).get("sha256_hash", ""),
+            "public_citation_text": "MPHA public properties page listing housing properties with addresses, AMP/CHR labels, property types, unit counts, and build years.",
         }
     )
     for spec in source_specs:
@@ -844,6 +1790,8 @@ def transform_sources(
     snapshot_dir = project_root / "data" / "raw" / SOURCE_SNAPSHOT_DIR
     hud_path = snapshot_dir / "hud_public_housing_buildings_mn002.jsonl"
     metrogis_path = snapshot_dir / "metrogis_hennepin_minneapolis_parcels_current.jsonl"
+    mpha_path = snapshot_dir / MPHA_PROPERTIES_RAW_FILENAME
+    civic_features_by_layer = load_civic_boundary_features(snapshot_dir)
 
     hud_features = list(read_jsonl(hud_path))
     hud_attrs = [feature_attributes(feature) for feature in hud_features]
@@ -868,6 +1816,50 @@ def transform_sources(
         if public_housing_name_matches(record["owner_name"], record["taxpayer_name"]):
             state_candidate_ids.add(parcel_id)
 
+    state_records_by_full_address: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    state_records_by_street: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    state_records_by_directionless_full_address: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    state_records_by_directionless_street: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for record in state_records_by_parcel.values():
+        full_key = address_full_key(record.get("address"))
+        street_key = address_street_key(record.get("address"))
+        directionless_full_key = address_directionless_full_key(record.get("address"))
+        directionless_street_key = address_directionless_street_key(record.get("address"))
+        if full_key:
+            state_records_by_full_address[full_key].append(record)
+        if street_key:
+            state_records_by_street[street_key].append(record)
+        if directionless_full_key:
+            state_records_by_directionless_full_address[directionless_full_key].append(record)
+        if directionless_street_key:
+            state_records_by_directionless_street[directionless_street_key].append(record)
+
+    mpha_portfolio_records = [
+        mpha_portfolio_record_from_dict(row)
+        for row in read_jsonl(mpha_path)
+    ] if mpha_path.exists() else []
+    mpha_scattered_portfolio_records = [
+        record
+        for record in mpha_portfolio_records
+        if record.listed_address.lower() == "located throughout the city"
+    ]
+    mpha_portfolio_by_parcel: dict[str, list[MphaPortfolioRecord]] = defaultdict(list)
+    mpha_portfolio_unmatched: list[MphaPortfolioRecord] = []
+    for record in mpha_portfolio_records:
+        if record in mpha_scattered_portfolio_records:
+            continue
+        parcel_id = match_mpha_portfolio_record(
+            record,
+            state_records_by_full_address,
+            state_records_by_street,
+            state_records_by_directionless_full_address,
+            state_records_by_directionless_street,
+        )
+        if parcel_id:
+            mpha_portfolio_by_parcel[parcel_id].append(record)
+        else:
+            mpha_portfolio_unmatched.append(record)
+
     transformer = get_transformer()
     assessing_by_parcel: dict[str, list[AssessingRecord]] = defaultdict(list)
     assessing_candidates_by_year: dict[int, set[str]] = defaultdict(set)
@@ -889,11 +1881,13 @@ def transform_sources(
     hud_unmatched: list[dict[str, Any]] = []
     for feature in hud_scattered_features:
         attrs = feature_attributes(feature)
-        longitude = parse_float(attrs.get("LON") or (feature.get("geometry") or {}).get("x"))
-        latitude = parse_float(attrs.get("LAT") or (feature.get("geometry") or {}).get("y"))
-        parcel_feature = find_parcel_for_point(longitude, latitude, state_features)
-        if parcel_feature:
-            parcel_id = normalize_pin(feature_attributes(parcel_feature).get("COUNTY_PIN"))
+        parcel_id = match_hud_building_record_to_parcel(
+            attrs,
+            feature,
+            state_records_by_full_address,
+            state_features,
+        )
+        if parcel_id:
             hud_groups_by_parcel[parcel_id].append(attrs)
         else:
             hud_unmatched.append(attrs)
@@ -902,6 +1896,7 @@ def transform_sources(
         set(hud_groups_by_parcel)
         | state_candidate_ids
         | assessing_candidates_by_year.get(2025, set())
+        | set(mpha_portfolio_by_parcel)
     )
     historical_candidate_ids = set().union(*assessing_candidates_by_year.values()) if assessing_candidates_by_year else set()
     all_candidate_ids = current_candidate_ids | historical_candidate_ids
@@ -917,30 +1912,58 @@ def transform_sources(
         assessing_records = sorted(assessing_by_parcel.get(parcel_id, []), key=lambda item: item.year)
         latest_assessing = choose_latest_assessing(assessing_records)
         hud_rows = hud_groups_by_parcel.get(parcel_id, [])
-        latest_candidate_year = max(
-            [record.year for record in assessing_records if record.parcel_id in assessing_candidates_by_year.get(record.year, set())],
-            default=None,
-        )
+        candidate_assessing_years = [
+            record.year
+            for record in assessing_records
+            if record.parcel_id in assessing_candidates_by_year.get(record.year, set())
+        ]
+        latest_candidate_year = max(candidate_assessing_years, default=None)
         is_current = parcel_id in current_candidate_ids
         property_id = f"parcel-{parcel_id}"
+        portfolio_rows = sorted(
+            mpha_portfolio_by_parcel.get(parcel_id, []),
+            key=lambda item: (item.name.lower(), item.listed_address.lower()),
+        )
+        primary_portfolio_row = portfolio_rows[0] if portfolio_rows else None
         hud_unit_count = sum(
             parse_int(row.get("TOTAL_DWELLING_UNITS")) or 0
             for row in hud_rows
             if row.get("TOTAL_DWELLING_UNITS") not in {None, ""}
         )
-        first_seen, last_seen = source_date_for_property(assessing_records, state_record, hud_rows, today)
+        first_seen, last_seen = source_date_for_property(assessing_records, state_record, hud_rows, portfolio_rows, today)
         address = (
             (latest_assessing.address if latest_assessing else "")
             or (state_record or {}).get("address", "")
             or normalize_address(hud_rows[0].get("STD_ADDR") if hud_rows else "")
+            or (primary_portfolio_row.listed_address if primary_portfolio_row else "")
         )
         owner_name = (latest_assessing.owner_name if latest_assessing else "") or (state_record or {}).get("owner_name", "")
         taxpayer_name = (state_record or {}).get("taxpayer_name", "") or (latest_assessing.taxpayer_name if latest_assessing else "")
         property_type = (
-            (latest_assessing.property_type if latest_assessing else "")
+            (primary_portfolio_row.property_type if primary_portfolio_row else "")
+            or (latest_assessing.property_type if latest_assessing else "")
             or (state_record or {}).get("property_type", "")
             or clean_text(hud_rows[0].get("BUILDING_TYPE_CODE") if hud_rows else "")
             or "Scattered-site housing"
+        )
+        latitude = clean_coordinate(
+            latest_assessing.latitude if latest_assessing else None,
+            (state_record or {}).get("latitude"),
+        )
+        longitude = clean_coordinate(
+            latest_assessing.longitude if latest_assessing else None,
+            (state_record or {}).get("longitude"),
+        )
+        civic_geography = civic_geography_for_point(longitude, latitude, civic_features_by_layer)
+        unit_count = choose_unit_count(
+            building_use=latest_assessing.building_use if latest_assessing else "",
+            property_type=property_type,
+            reported_counts=[
+                ("mpha_portfolio", primary_portfolio_row.unit_count if primary_portfolio_row else None),
+                ("hud_public_housing_buildings", hud_unit_count if hud_unit_count else None),
+                ("minneapolis_assessing_total_units", latest_assessing.estimated_unit_count if latest_assessing else None),
+                ("metrogis_num_units", (state_record or {}).get("estimated_unit_count")),
+            ],
         )
         status_parts = []
         hud_statuses = sorted(
@@ -952,6 +1975,8 @@ def transform_sources(
         )
         if hud_statuses:
             status_parts.append(f"HUD building status {', '.join(hud_statuses)}")
+        if portfolio_rows:
+            status_parts.append("Official MPHA portfolio listing")
         if is_current and parcel_id in assessing_candidates_by_year.get(2025, set()):
             status_parts.append("Current public housing ownership match in Minneapolis assessing records")
         if is_current and parcel_id in state_candidate_ids:
@@ -968,27 +1993,33 @@ def transform_sources(
             "state": (latest_assessing.state if latest_assessing else "") or (state_record or {}).get("state", "") or "MN",
             "zip": (latest_assessing.zip_code if latest_assessing else "") or (state_record or {}).get("zip", ""),
             "parcel_id": parcel_id,
-            "latitude": clean_coordinate(
-                latest_assessing.latitude if latest_assessing else None,
-                (state_record or {}).get("latitude"),
-            ),
-            "longitude": clean_coordinate(
-                latest_assessing.longitude if latest_assessing else None,
-                (state_record or {}).get("longitude"),
-            ),
+            "latitude": latitude,
+            "longitude": longitude,
             "current_owner_name": owner_name,
             "current_taxpayer_name": taxpayer_name,
-            "property_type": property_type,
-            "estimated_unit_count": clean_units(
-                hud_unit_count if hud_unit_count else None,
-                latest_assessing.estimated_unit_count if latest_assessing else None,
-                (state_record or {}).get("estimated_unit_count"),
+            "official_property_name": "; ".join(record.name for record in portfolio_rows if record.name),
+            "official_listed_address": "; ".join(
+                record.listed_address
+                for record in portfolio_rows
+                if record.listed_address and record.listed_address.lower() != "located throughout the city"
             ),
+            "is_official_mpha_listing": "true" if portfolio_rows else "false",
+            "property_type": property_type,
+            "estimated_unit_count": count_or_blank(unit_count["unit_count"]),
+            "unit_count_source": unit_count["unit_count_source"],
+            "unit_count_confidence": unit_count["unit_count_confidence"],
+            "unit_count_notes": unit_count["unit_count_notes"],
+            "ward": civic_geography["ward"],
+            "neighborhood": civic_geography["neighborhood"],
+            "community": civic_geography["community"],
+            "police_precinct": civic_geography["police_precinct"],
+            "police_sector": civic_geography["police_sector"],
             "current_status": "; ".join(status_parts),
             "public_notes": mpha_source_note(
                 bool(hud_rows),
                 parcel_id in state_candidate_ids,
-                [record.year for record in assessing_records if record.parcel_id in assessing_candidates_by_year.get(record.year, set())],
+                candidate_assessing_years,
+                portfolio_rows,
                 is_current,
             ),
             "first_seen_date": first_seen,
@@ -1016,6 +2047,28 @@ def transform_sources(
                     "DEVELOPMENT_CODE MN002000002 / PROJECT_NAME SCATTERED SITES",
                     0.8,
                     "HUD Public Housing Buildings directly lists this address/building as part of MPHA development MN002000002 / Scattered Sites.",
+                )
+            )
+        for portfolio_record in portfolio_rows:
+            evidence_rows.append(
+                evidence_row(
+                    f"ev-mpha-portfolio-{slugify(portfolio_record.name, portfolio_record.listed_address)}-{property_id}",
+                    property_id,
+                    MPHA_PROPERTIES_SOURCE_ID,
+                    "public_housing_property_record",
+                    " | ".join(
+                        item
+                        for item in [
+                            portfolio_record.name,
+                            portfolio_record.listed_address,
+                            portfolio_record.amp,
+                            portfolio_record.property_type,
+                            portfolio_record.unit_count_text,
+                        ]
+                        if item
+                    ),
+                    0.8,
+                    f"MPHA's public properties page lists {portfolio_record.name} at {portfolio_record.listed_address} as {portfolio_record.property_type} with {portfolio_record.unit_count_text}.",
                 )
             )
         if parcel_id in state_candidate_ids:
@@ -1048,17 +2101,27 @@ def transform_sources(
                     f"Minneapolis assessing {assessing.year} records show a public housing owner or taxpayer name match and a small residential property classification.",
                 )
             )
-        evidence_rows.append(
-            evidence_row(
-                f"ev-mpha-overview-{property_id}",
-                property_id,
-                "mpha_properties_overview",
-                "portfolio_context",
-                "CHR single-family and multiplex homes",
-                0.05,
-                "MPHA's public properties page describes scattered-site homes as CHR single-family and multiplex homes, nearly 800 units.",
+        has_chr_context = (
+            bool(mpha_scattered_portfolio_records)
+            and (
+                bool(hud_rows)
+                or bool(candidate_assessing_years)
+                or "COMMUNITY HOUSING RESOURCES" in normalized_name_blob(owner_name, taxpayer_name)
             )
         )
+        if has_chr_context:
+            scattered_record = mpha_scattered_portfolio_records[0]
+            evidence_rows.append(
+                evidence_row(
+                    f"ev-mpha-overview-{property_id}",
+                    property_id,
+                    MPHA_PROPERTIES_SOURCE_ID,
+                    "portfolio_context",
+                    "CHR single-family and multiplex homes",
+                    0.05,
+                    f"MPHA's public properties page lists {scattered_record.name} as {scattered_record.property_type}, {scattered_record.unit_count_text}.",
+                )
+            )
 
         previous: AssessingRecord | None = None
         for assessing in assessing_records:
@@ -1094,6 +2157,14 @@ def transform_sources(
         property_id = f"hud-mn002000002-{key}"
         longitude = parse_float(attrs.get("LON"))
         latitude = parse_float(attrs.get("LAT"))
+        civic_geography = civic_geography_for_point(longitude, latitude, civic_features_by_layer)
+        unit_count = choose_unit_count(
+            building_use=clean_text(attrs.get("BUILDING_TYPE_CODE")),
+            property_type=clean_text(attrs.get("BUILDING_TYPE_CODE")),
+            reported_counts=[
+                ("hud_public_housing_buildings", attrs.get("TOTAL_DWELLING_UNITS")),
+            ],
+        )
         record_date = date_from_epoch_ms(attrs.get("LAST_UPDT_DTTM")) or today
         address = normalize_address(attrs.get("STD_ADDR"))
         property_rows[property_id] = {
@@ -1107,10 +2178,21 @@ def transform_sources(
             "longitude": longitude if longitude is not None else "",
             "current_owner_name": "",
             "current_taxpayer_name": "",
+            "official_property_name": "",
+            "official_listed_address": "",
+            "is_official_mpha_listing": "false",
             "property_type": clean_text(attrs.get("BUILDING_TYPE_CODE")) or "Scattered-site housing",
-            "estimated_unit_count": parse_int(attrs.get("TOTAL_DWELLING_UNITS")) or "",
+            "estimated_unit_count": count_or_blank(unit_count["unit_count"]),
+            "unit_count_source": unit_count["unit_count_source"],
+            "unit_count_confidence": unit_count["unit_count_confidence"],
+            "unit_count_notes": unit_count["unit_count_notes"],
+            "ward": civic_geography["ward"],
+            "neighborhood": civic_geography["neighborhood"],
+            "community": civic_geography["community"],
+            "police_precinct": civic_geography["police_precinct"],
+            "police_sector": civic_geography["police_sector"],
             "current_status": f"HUD building status {clean_text(attrs.get('BUILDING_STATUS_TYPE_CODE'))}",
-            "public_notes": "HUD directly lists this address/building in development MN002000002 / Scattered Sites. No matching MetroGIS/Hennepin parcel ID was found for the mapped point.",
+            "public_notes": "HUD directly lists this address/building in development MN002000002 / Scattered Sites. No matching MetroGIS/Hennepin parcel ID was found from address or mapped-point matching.",
             "first_seen_date": record_date,
             "last_seen_date": record_date,
             "is_current": "true",
@@ -1125,6 +2207,72 @@ def transform_sources(
                 "DEVELOPMENT_CODE MN002000002 / PROJECT_NAME SCATTERED SITES",
                 0.8,
                 "HUD Public Housing Buildings directly lists this address/building as part of MPHA development MN002000002 / Scattered Sites.",
+            )
+        )
+
+    for record in mpha_portfolio_unmatched:
+        base_property_id = f"mpha-portfolio-{slugify(record.name, record.listed_address)}"
+        property_id = base_property_id
+        if property_id in property_rows:
+            property_id = f"{base_property_id}-{sha256(record.source_url.encode('utf-8')).hexdigest()[:8]}"
+        record_date = clean_text(record.retrieved_at)[:10] or today
+        unit_count = choose_unit_count(
+            building_use=record.property_type,
+            property_type=record.property_type,
+            reported_counts=[
+                ("mpha_portfolio", record.unit_count),
+            ],
+        )
+        property_rows[property_id] = {
+            "property_id": property_id,
+            "canonical_address": record.listed_address,
+            "city": "Minneapolis",
+            "state": "MN",
+            "zip": "",
+            "parcel_id": "",
+            "latitude": "",
+            "longitude": "",
+            "current_owner_name": "",
+            "current_taxpayer_name": "",
+            "official_property_name": record.name,
+            "official_listed_address": record.listed_address,
+            "is_official_mpha_listing": "true",
+            "property_type": record.property_type,
+            "estimated_unit_count": count_or_blank(unit_count["unit_count"]),
+            "unit_count_source": unit_count["unit_count_source"],
+            "unit_count_confidence": unit_count["unit_count_confidence"],
+            "unit_count_notes": unit_count["unit_count_notes"],
+            "ward": "",
+            "neighborhood": "",
+            "community": "",
+            "police_precinct": "",
+            "police_sector": "",
+            "current_status": "Official MPHA portfolio listing",
+            "public_notes": f"MPHA's public properties page lists {record.name} at {record.listed_address}. No matching MetroGIS/Hennepin parcel ID was found from address matching.",
+            "first_seen_date": record_date,
+            "last_seen_date": record_date,
+            "is_current": "true",
+            "detail_url_slug": slugify(record.listed_address, record.name),
+        }
+        evidence_rows.append(
+            evidence_row(
+                f"ev-mpha-portfolio-{slugify(record.name, record.listed_address)}-{property_id}",
+                property_id,
+                MPHA_PROPERTIES_SOURCE_ID,
+                "public_housing_property_record",
+                " | ".join(
+                    item
+                    for item in [
+                        record.name,
+                        record.listed_address,
+                        record.amp,
+                        record.property_type,
+                        record.unit_count_text,
+                    ]
+                    if item
+                ),
+                0.8,
+                f"MPHA's public properties page lists {record.name} at {record.listed_address} as {record.property_type} with {record.unit_count_text}.",
             )
         )
 
@@ -1162,6 +2310,14 @@ def transform_sources(
             default="",
         ),
         "metrogis_hennepin_minneapolis_parcels_current": max(state_record_dates, default=""),
+        MPHA_PROPERTIES_SOURCE_ID: max(
+            [
+                clean_text(record.retrieved_at)[:10]
+                for record in mpha_portfolio_records
+                if clean_text(record.retrieved_at)
+            ],
+            default="",
+        ),
         CCS_PERMITS_SOURCE_ID: max(
             [
                 clean_text(permit.get("issue_date") or permit.get("complete_date"))
@@ -1178,6 +2334,9 @@ def transform_sources(
         "hud_mn002_building_records": len(hud_features),
         "hud_scattered_site_building_records": len(hud_scattered_features),
         "hud_scattered_site_unmatched_to_parcel": len(hud_unmatched),
+        "mpha_portfolio_property_records": len(mpha_portfolio_records),
+        "mpha_portfolio_records_matched_to_parcels": sum(len(rows) for rows in mpha_portfolio_by_parcel.values()),
+        "mpha_portfolio_records_unmatched_to_parcels": len(mpha_portfolio_unmatched),
         "metrogis_minneapolis_parcel_records": len(state_features),
         "metrogis_public_housing_name_candidates": len(state_candidate_ids),
         "minneapolis_ccs_permit_records": len(permit_features),
@@ -1185,6 +2344,10 @@ def transform_sources(
         "minneapolis_assessing_candidates_by_year": {
             str(year): len(parcel_ids)
             for year, parcel_ids in sorted(assessing_candidates_by_year.items())
+        },
+        "civic_boundary_features": {
+            layer.layer_id: len(civic_features_by_layer.get(layer.layer_id, []))
+            for layer in CIVIC_BOUNDARY_LAYERS
         },
         "exported_properties": len(properties),
         "exported_property_facts": len(property_facts),
@@ -1197,6 +2360,7 @@ def transform_sources(
         "source_dates": source_dates,
         "property_facts": property_facts,
         "property_permits": property_permits,
+        "civic_boundaries": build_civic_boundaries_geojson(civic_features_by_layer, retrieved_at),
     }
 
 
@@ -1206,6 +2370,8 @@ def extract_sources(project_root: Path, retrieved_at: str) -> dict[str, dict[str
     for source in RAW_SOURCES:
         print(f"Extracting {source.source_id}...")
         extracts[source.source_id] = extract_arcgis_source(source, snapshot_dir, retrieved_at=retrieved_at)
+    print(f"Extracting {MPHA_PROPERTIES_SOURCE_ID}...")
+    extracts[MPHA_PROPERTIES_SOURCE_ID] = extract_mpha_properties_overview(snapshot_dir, retrieved_at)
     write_json(project_root / "data" / "raw" / "source-manifest.json", {"retrieved_at": retrieved_at, "sources": extracts})
     return extracts
 
@@ -1247,6 +2413,7 @@ def write_transformed_inputs(
         PROPERTY_PERMIT_FIELDS,
         transform_result["property_permits"],
     )
+    write_json(raw_dir / "civic-boundaries.geojson", transform_result["civic_boundaries"])
 
     summary = {
         **transform_result["summary"],

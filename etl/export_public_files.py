@@ -83,6 +83,7 @@ def export_public_files(
     change_events: list[dict[str, Any]],
     property_facts: list[dict[str, Any]],
     property_permits: list[dict[str, Any]],
+    civic_boundaries: dict[str, Any] | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     site_data_dir.mkdir(parents=True, exist_ok=True)
@@ -143,10 +144,24 @@ def export_public_files(
             )
         ],
     }
+    civic_boundaries_json = civic_boundaries or {
+        "type": "FeatureCollection",
+        "metadata": {
+            "schema_version": SCHEMA_VERSION,
+            "generated_at": generated_at,
+        },
+        "features": [],
+    }
+    civic_boundaries_json["metadata"] = {
+        **civic_boundaries_json.get("metadata", {}),
+        "schema_version": SCHEMA_VERSION,
+        "generated_at": generated_at,
+    }
 
     write_properties_csv(output_dir / "properties.csv", properties)
     write_json(output_dir / "properties.json", properties_json)
     write_json(output_dir / "properties.geojson", build_geojson(properties, generated_at))
+    write_json(output_dir / "civic-boundaries.geojson", civic_boundaries_json)
     write_json(output_dir / "property-history.json", history_json)
     write_json(output_dir / "sources.json", sources_json)
     write_json(output_dir / "changelog.json", changelog_json)
@@ -159,6 +174,7 @@ def export_public_files(
         "properties.csv",
         "properties.json",
         "properties.geojson",
+        "civic-boundaries.geojson",
         "property-history.json",
         "sources.json",
         "changelog.json",

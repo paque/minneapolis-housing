@@ -7,7 +7,7 @@ export const confidenceDefinitions: Record<
   confirmed: {
     label: "Confirmed",
     description:
-      "Direct public evidence identifies the property as MPHA/CHR scattered-site housing or an equivalent public housing record.",
+      "Direct public evidence identifies the property as an MPHA/CHR public housing property.",
     className: "bg-civic-green text-white border-civic-green"
   },
   likely: {
@@ -25,7 +25,7 @@ export const confidenceDefinitions: Record<
   excluded: {
     label: "Excluded",
     description:
-      "Public evidence suggests the property should not be included in the current scattered-site portfolio.",
+      "Public evidence suggests the property should not be included in the current public housing portfolio.",
     className: "bg-civic-clay text-white border-civic-clay"
   }
 };

@@ -1,20 +1,47 @@
 ---
 import Layout from "@components/Layout.astro";
 import PropertyCard from "@components/PropertyCard.astro";
-import { formatGeneratedAt, getPropertiesPayload } from "@lib/properties";
+import { formatGeneratedAt, getPropertiesPayload, getSources } from "@lib/properties";
+import {
+  getSourceCategory,
+  sourceCategoryLabels,
+  visibleSourceCategories,
+  type EvidenceSourceCategory
+} from "@lib/sourceCategories";
 
 const payload = await getPropertiesPayload();
+const sources = await getSources();
 const properties = payload.properties;
+const uniqueValues = (values: string[]) =>
+  Array.from(new Set(values.filter(Boolean))).sort((left, right) =>
+    left.localeCompare(right, "en-US", { numeric: true, sensitivity: "base" })
+  );
+const geographyOptions = {
+  wards: uniqueValues(properties.map((property) => property.ward)),
+  neighborhoods: uniqueValues(properties.map((property) => property.neighborhood)),
+  communities: uniqueValues(properties.map((property) => property.community)),
+  precincts: uniqueValues(properties.map((property) => property.police_precinct)),
+  sectors: uniqueValues(properties.map((property) => property.police_sector))
+};
+const sourceCategoriesByProperty = sources.property_evidence.reduce<Map<string, Set<EvidenceSourceCategory>>>(
+  (categoriesByProperty, evidence) => {
+    const categories = categoriesByProperty.get(evidence.property_id) ?? new Set<EvidenceSourceCategory>();
+    categories.add(getSourceCategory(evidence));
+    categoriesByProperty.set(evidence.property_id, categories);
+    return categoriesByProperty;
+  },
+  new Map()
+);
 ---
 
-<Layout title="Properties | Minneapolis Scattered-Site Housing Explorer" description="Search Minneapolis scattered-site housing property records.">
+<Layout title="Properties | Minneapolis Public Housing Explorer" description="Search Minneapolis public housing property records.">
   <section class="border-b border-line bg-paper">
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 class="text-3xl font-bold">Property List</h1>
           <p class="mt-2 max-w-3xl text-ink/70">
-            Search by address, parcel ID, owner, taxpayer, record status, or confidence label.
+            Search by official MPHA name, address, parcel ID, owner, taxpayer, record status, or confidence label.
           </p>
         </div>
         <p class="text-sm font-semibold text-ink/65">
@@ -22,18 +49,18 @@ const properties = payload.properties;
         </p>
       </div>
 
-      <div class="mt-6 grid gap-3 md:grid-cols-[1fr_220px]">
+      <div class="mt-6 grid gap-3 lg:grid-cols-[1fr_210px_190px_280px_230px]">
         <label class="block">
-          <span class="sr-only">Search properties</span>
+          <span class="mb-1 block text-xs font-bold uppercase tracking-normal text-ink/55">Search</span>
           <input
             class="w-full rounded border border-line bg-white px-4 py-3 text-base shadow-sm focus:shadow-focus"
             data-property-search
-            placeholder="Search address, parcel, owner, taxpayer, or status"
+            placeholder="Search name, address, parcel, owner, taxpayer, or status"
             type="search"
           />
         </label>
         <label class="block">
-          <span class="sr-only">Filter by confidence</span>
+          <span class="mb-1 block text-xs font-bold uppercase tracking-normal text-ink/55">Confidence</span>
           <select class="w-full rounded border border-line bg-white px-4 py-3 text-base shadow-sm focus:shadow-focus" data-confidence-filter>
             <option value="">All confidence labels</option>
             <option value="confirmed">Confirmed</option>
@@ -42,6 +69,101 @@ const properties = payload.properties;
             <option value="excluded">Excluded</option>
           </select>
         </label>
+        <label class="block">
+          <span class="mb-1 block text-xs font-bold uppercase tracking-normal text-ink/55">Record Status</span>
+          <select class="w-full rounded border border-line bg-white px-4 py-3 text-base shadow-sm focus:shadow-focus" data-status-filter>
+            <option value="">All records</option>
+            <option value="current">Current</option>
+            <option value="historical">Historical</option>
+          </select>
+        </label>
+        <fieldset class="block">
+          <legend class="mb-1 block text-xs font-bold uppercase tracking-normal text-ink/55">Source Type</legend>
+          <div class="grid gap-1 rounded border border-line bg-white px-3 py-2 text-sm shadow-sm sm:grid-cols-2 lg:grid-cols-1">
+            {visibleSourceCategories.map((category) => (
+              <label class="flex items-center gap-2">
+                <input
+                  class="h-4 w-4 rounded border-line text-civic-green focus:shadow-focus"
+                  data-source-filter
+                  type="checkbox"
+                  value={category}
+                />
+                <span>{sourceCategoryLabels[category]}</span>
+              </label>
+            ))}
+          </div>
+          <p class="mt-1 text-xs font-semibold text-ink/55">Selected sources are combined.</p>
+        </fieldset>
+        <label class="block">
+          <span class="mb-1 block text-xs font-bold uppercase tracking-normal text-ink/55">Sort</span>
+          <select class="w-full rounded border border-line bg-white px-4 py-3 text-base shadow-sm focus:shadow-focus" data-property-sort>
+            <option value="address-asc">Address A-Z</option>
+            <option value="confidence-desc">Confidence score high-low</option>
+            <option value="units-desc">Units high-low</option>
+            <option value="last-seen-desc">Last seen newest</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <label class="block">
+          <span class="mb-1 block text-xs font-bold uppercase tracking-normal text-ink/55">Units</span>
+          <select class="w-full rounded border border-line bg-white px-4 py-3 text-base shadow-sm focus:shadow-focus" data-unit-filter>
+            <option value="">Any units</option>
+            <option value="zero">0 units</option>
+            <option value="one">1 unit</option>
+            <option value="two_to_four">2-4 units</option>
+            <option value="five_plus">5+ units</option>
+            <option value="unknown">Not listed</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-xs font-bold uppercase tracking-normal text-ink/55">Ward</span>
+          <select class="w-full rounded border border-line bg-white px-4 py-3 text-base shadow-sm focus:shadow-focus" data-ward-filter>
+            <option value="">All wards</option>
+            {geographyOptions.wards.map((value) => <option value={value}>{value}</option>)}
+          </select>
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-xs font-bold uppercase tracking-normal text-ink/55">Neighborhood</span>
+          <select class="w-full rounded border border-line bg-white px-4 py-3 text-base shadow-sm focus:shadow-focus" data-neighborhood-filter>
+            <option value="">All neighborhoods</option>
+            {geographyOptions.neighborhoods.map((value) => <option value={value}>{value}</option>)}
+          </select>
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-xs font-bold uppercase tracking-normal text-ink/55">Community</span>
+          <select class="w-full rounded border border-line bg-white px-4 py-3 text-base shadow-sm focus:shadow-focus" data-community-filter>
+            <option value="">All communities</option>
+            {geographyOptions.communities.map((value) => <option value={value}>{value}</option>)}
+          </select>
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-xs font-bold uppercase tracking-normal text-ink/55">Precinct</span>
+          <select class="w-full rounded border border-line bg-white px-4 py-3 text-base shadow-sm focus:shadow-focus" data-precinct-filter>
+            <option value="">All precincts</option>
+            {geographyOptions.precincts.map((value) => <option value={value}>{value}</option>)}
+          </select>
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-xs font-bold uppercase tracking-normal text-ink/55">MPD Sector</span>
+          <select class="w-full rounded border border-line bg-white px-4 py-3 text-base shadow-sm focus:shadow-focus" data-sector-filter>
+            <option value="">All sectors</option>
+            {geographyOptions.sectors.map((value) => <option value={value}>{value}</option>)}
+          </select>
+        </label>
+      </div>
+
+      <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-sm font-semibold text-ink/65" data-result-count aria-live="polite">
+          {properties.length.toLocaleString()} records
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <div class="flex flex-wrap gap-2" data-active-filters hidden></div>
+          <button class="rounded border border-line bg-white px-3 py-2 text-sm font-bold text-ink hover:border-civic-green hover:text-civic-green" data-clear-filters hidden type="button">
+            Clear all
+          </button>
+        </div>
       </div>
     </div>
   </section>
@@ -49,9 +171,22 @@ const properties = payload.properties;
   <section class="bg-white">
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {properties.length > 0 ? (
-        <div class="grid gap-4" data-property-results>
-          {properties.map((property) => <PropertyCard property={property} />)}
-        </div>
+        <>
+          <div class="grid gap-4" data-property-results>
+            {properties.map((property) => (
+              <PropertyCard
+                property={property}
+                sourceCategories={Array.from(sourceCategoriesByProperty.get(property.property_id) ?? [])}
+              />
+            ))}
+          </div>
+          <div class="rounded border border-line bg-paper p-6" data-no-property-results hidden>
+            <h2 class="text-xl font-bold">No matching records</h2>
+            <p class="mt-2 text-ink/70">
+              Clear a filter or try a different search term.
+            </p>
+          </div>
+        </>
       ) : (
         <div class="rounded border border-line bg-paper p-6">
           <h2 class="text-xl font-bold">No records are currently published</h2>
@@ -66,20 +201,346 @@ const properties = payload.properties;
   <script>
     const searchInput = document.querySelector<HTMLInputElement>("[data-property-search]");
     const confidenceFilter = document.querySelector<HTMLSelectElement>("[data-confidence-filter]");
+    const statusFilter = document.querySelector<HTMLSelectElement>("[data-status-filter]");
+    const unitFilter = document.querySelector<HTMLSelectElement>("[data-unit-filter]");
+    const wardFilter = document.querySelector<HTMLSelectElement>("[data-ward-filter]");
+    const neighborhoodFilter = document.querySelector<HTMLSelectElement>("[data-neighborhood-filter]");
+    const communityFilter = document.querySelector<HTMLSelectElement>("[data-community-filter]");
+    const precinctFilter = document.querySelector<HTMLSelectElement>("[data-precinct-filter]");
+    const sectorFilter = document.querySelector<HTMLSelectElement>("[data-sector-filter]");
+    const sourceFilters = Array.from(document.querySelectorAll<HTMLInputElement>("[data-source-filter]"));
+    const sortSelect = document.querySelector<HTMLSelectElement>("[data-property-sort]");
+    const resultContainer = document.querySelector<HTMLElement>("[data-property-results]");
+    const resultCount = document.querySelector<HTMLElement>("[data-result-count]");
+    const activeFilters = document.querySelector<HTMLElement>("[data-active-filters]");
+    const clearFilters = document.querySelector<HTMLButtonElement>("[data-clear-filters]");
+    const noResults = document.querySelector<HTMLElement>("[data-no-property-results]");
     const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-property-card]"));
+
+    const confidenceLabels: Record<string, string> = {
+      confirmed: "Confirmed",
+      likely: "Likely",
+      uncertain: "Uncertain",
+      excluded: "Excluded"
+    };
+    const statusLabels: Record<string, string> = {
+      current: "Current",
+      historical: "Historical"
+    };
+    const sourceLabels: Record<string, string> = {
+      official_mpha: "Official MPHA listing",
+      hud: "Direct HUD listing",
+      parcel: "Parcel owner/taxpayer",
+      assessing: "Annual assessing",
+      portfolio: "MPHA context"
+    };
+    const unitLabels: Record<string, string> = {
+      zero: "0 units",
+      one: "1 unit",
+      two_to_four: "2-4 units",
+      five_plus: "5+ units",
+      unknown: "Not listed"
+    };
+    const sortLabels: Record<string, string> = {
+      "confidence-desc": "Confidence score high-low",
+      "units-desc": "Units high-low",
+      "last-seen-desc": "Last seen newest"
+    };
+
+    function getNumber(card: HTMLElement, key: string): number | null {
+      const value = card.dataset[key];
+      if (value === undefined || value === "") {
+        return null;
+      }
+      const numericValue = Number(value);
+      return Number.isFinite(numericValue) ? numericValue : null;
+    }
+
+    function compareText(left: string | undefined, right: string | undefined): number {
+      return String(left || "").localeCompare(String(right || ""), "en-US", {
+        numeric: true,
+        sensitivity: "base"
+      });
+    }
+
+    function compareCards(left: HTMLElement, right: HTMLElement): number {
+      const sort = String(sortSelect?.value || "address-asc");
+
+      if (sort === "confidence-desc") {
+        return (getNumber(right, "score") ?? -1) - (getNumber(left, "score") ?? -1)
+          || compareText(left.dataset.address, right.dataset.address);
+      }
+
+      if (sort === "units-desc") {
+        return (getNumber(right, "units") ?? -1) - (getNumber(left, "units") ?? -1)
+          || compareText(left.dataset.address, right.dataset.address);
+      }
+
+      if (sort === "last-seen-desc") {
+        return compareText(right.dataset.lastSeen, left.dataset.lastSeen)
+          || compareText(left.dataset.address, right.dataset.address);
+      }
+
+      return compareText(left.dataset.address, right.dataset.address);
+    }
+
+    function selectedSources(): string[] {
+      return sourceFilters
+        .filter((input) => input.checked)
+        .map((input) => input.value);
+    }
+
+    function updateActiveFilters(
+      query: string,
+      confidence: string,
+      status: string,
+      sources: string[],
+      units: string,
+      ward: string,
+      neighborhood: string,
+      community: string,
+      precinct: string,
+      sector: string,
+      sort: string
+    ) {
+      if (!activeFilters) {
+        return;
+      }
+
+      activeFilters.innerHTML = "";
+
+      const addChip = (label: string, clear: () => void) => {
+        const button = document.createElement("button");
+        button.className = "rounded border border-line bg-white px-3 py-2 text-sm font-bold text-ink hover:border-civic-green hover:text-civic-green";
+        button.type = "button";
+        button.setAttribute("aria-label", `Clear ${label}`);
+        button.textContent = `${label} - Clear`;
+        button.addEventListener("click", clear);
+        activeFilters.append(button);
+      };
+
+      if (query) {
+        addChip(`Search: ${query}`, () => {
+          if (searchInput) {
+            searchInput.value = "";
+          }
+          applyFilters();
+        });
+      }
+
+      if (confidence) {
+        addChip(`Confidence: ${confidenceLabels[confidence] ?? confidence}`, () => {
+          if (confidenceFilter) {
+            confidenceFilter.value = "";
+          }
+          applyFilters();
+        });
+      }
+
+      if (status) {
+        addChip(`Status: ${statusLabels[status] ?? status}`, () => {
+          if (statusFilter) {
+            statusFilter.value = "";
+          }
+          applyFilters();
+        });
+      }
+
+      if (units) {
+        addChip(`Units: ${unitLabels[units] ?? units}`, () => {
+          if (unitFilter) {
+            unitFilter.value = "";
+          }
+          applyFilters();
+        });
+      }
+
+      if (ward) {
+        addChip(`Ward: ${ward}`, () => {
+          if (wardFilter) {
+            wardFilter.value = "";
+          }
+          applyFilters();
+        });
+      }
+
+      if (neighborhood) {
+        addChip(`Neighborhood: ${neighborhood}`, () => {
+          if (neighborhoodFilter) {
+            neighborhoodFilter.value = "";
+          }
+          applyFilters();
+        });
+      }
+
+      if (community) {
+        addChip(`Community: ${community}`, () => {
+          if (communityFilter) {
+            communityFilter.value = "";
+          }
+          applyFilters();
+        });
+      }
+
+      if (precinct) {
+        addChip(`Precinct: ${precinct}`, () => {
+          if (precinctFilter) {
+            precinctFilter.value = "";
+          }
+          applyFilters();
+        });
+      }
+
+      if (sector) {
+        addChip(`Sector: ${sector}`, () => {
+          if (sectorFilter) {
+            sectorFilter.value = "";
+          }
+          applyFilters();
+        });
+      }
+
+      for (const source of sources) {
+        addChip(`Source: ${sourceLabels[source] ?? source}`, () => {
+          for (const input of sourceFilters) {
+            if (input.value === source) {
+              input.checked = false;
+            }
+          }
+          applyFilters();
+        });
+      }
+
+      if (sort !== "address-asc") {
+        addChip(`Sort: ${sortLabels[sort] ?? sort}`, () => {
+          if (sortSelect) {
+            sortSelect.value = "address-asc";
+          }
+          applyFilters();
+        });
+      }
+
+      const hasActiveControls = activeFilters.children.length > 0;
+      activeFilters.toggleAttribute("hidden", !hasActiveControls);
+      clearFilters?.toggleAttribute("hidden", !hasActiveControls);
+    }
 
     function applyFilters() {
       const query = String(searchInput?.value || "").trim().toLowerCase();
       const confidence = String(confidenceFilter?.value || "");
+      const status = String(statusFilter?.value || "");
+      const units = String(unitFilter?.value || "");
+      const ward = String(wardFilter?.value || "");
+      const neighborhood = String(neighborhoodFilter?.value || "");
+      const community = String(communityFilter?.value || "");
+      const precinct = String(precinctFilter?.value || "");
+      const sector = String(sectorFilter?.value || "");
+      const sources = selectedSources();
+      const sort = String(sortSelect?.value || "address-asc");
+      let visibleCount = 0;
 
       for (const card of cards) {
         const matchesQuery = !query || String(card.dataset.search || "").includes(query);
         const matchesConfidence = !confidence || card.dataset.confidence === confidence;
-        card.toggleAttribute("hidden", !(matchesQuery && matchesConfidence));
+        const matchesStatus = !status
+          || (status === "current" && card.dataset.current === "true")
+          || (status === "historical" && card.dataset.current === "false");
+        const cardUnits = getNumber(card, "units");
+        const matchesUnits = !units
+          || (units === "unknown" && cardUnits === null)
+          || (units === "zero" && cardUnits === 0)
+          || (units === "one" && cardUnits === 1)
+          || (units === "two_to_four" && cardUnits !== null && cardUnits >= 2 && cardUnits <= 4)
+          || (units === "five_plus" && cardUnits !== null && cardUnits >= 5);
+        const matchesWard = !ward || card.dataset.ward === ward;
+        const matchesNeighborhood = !neighborhood || card.dataset.neighborhood === neighborhood;
+        const matchesCommunity = !community || card.dataset.community === community;
+        const matchesPrecinct = !precinct || card.dataset.precinct === precinct;
+        const matchesSector = !sector || card.dataset.sector === sector;
+        const cardSources = String(card.dataset.sourceCategories || "");
+        const matchesSource = sources.length === 0
+          || sources.every((source) => cardSources.includes(`|${source}|`));
+        const isVisible = matchesQuery
+          && matchesConfidence
+          && matchesStatus
+          && matchesUnits
+          && matchesWard
+          && matchesNeighborhood
+          && matchesCommunity
+          && matchesPrecinct
+          && matchesSector
+          && matchesSource;
+        card.toggleAttribute("hidden", !isVisible);
+        if (isVisible) {
+          visibleCount += 1;
+        }
       }
+
+      if (resultContainer) {
+        for (const card of [...cards].sort(compareCards)) {
+          resultContainer.append(card);
+        }
+      }
+
+      if (resultCount) {
+        resultCount.textContent = visibleCount === cards.length
+          ? `${cards.length.toLocaleString()} records`
+          : `${visibleCount.toLocaleString()} of ${cards.length.toLocaleString()} records`;
+      }
+
+      noResults?.toggleAttribute("hidden", visibleCount > 0);
+      updateActiveFilters(query, confidence, status, sources, units, ward, neighborhood, community, precinct, sector, sort);
+    }
+
+    function clearAllFilters() {
+      if (searchInput) {
+        searchInput.value = "";
+      }
+      if (confidenceFilter) {
+        confidenceFilter.value = "";
+      }
+      if (statusFilter) {
+        statusFilter.value = "";
+      }
+      if (unitFilter) {
+        unitFilter.value = "";
+      }
+      if (wardFilter) {
+        wardFilter.value = "";
+      }
+      if (neighborhoodFilter) {
+        neighborhoodFilter.value = "";
+      }
+      if (communityFilter) {
+        communityFilter.value = "";
+      }
+      if (precinctFilter) {
+        precinctFilter.value = "";
+      }
+      if (sectorFilter) {
+        sectorFilter.value = "";
+      }
+      for (const input of sourceFilters) {
+        input.checked = false;
+      }
+      if (sortSelect) {
+        sortSelect.value = "address-asc";
+      }
+      applyFilters();
     }
 
     searchInput?.addEventListener("input", applyFilters);
     confidenceFilter?.addEventListener("change", applyFilters);
+    statusFilter?.addEventListener("change", applyFilters);
+    unitFilter?.addEventListener("change", applyFilters);
+    wardFilter?.addEventListener("change", applyFilters);
+    neighborhoodFilter?.addEventListener("change", applyFilters);
+    communityFilter?.addEventListener("change", applyFilters);
+    precinctFilter?.addEventListener("change", applyFilters);
+    sectorFilter?.addEventListener("change", applyFilters);
+    sourceFilters.forEach((input) => input.addEventListener("change", applyFilters));
+    sortSelect?.addEventListener("change", applyFilters);
+    clearFilters?.addEventListener("click", clearAllFilters);
+    applyFilters();
   </script>
 </Layout>

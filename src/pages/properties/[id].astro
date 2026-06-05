@@ -46,6 +46,10 @@ const parcelUrl = getMinneapolisParcelUrl(property.parcel_id);
 const propertyFact = await getPropertyFactByPropertyId(property.property_id);
 const propertyPermits = await getPropertyPermitsByPropertyId(property.property_id);
 const visiblePermits = propertyPermits.slice(0, 8);
+const pageTitle = property.official_property_name || property.canonical_address || property.property_id;
+const hasDifferentOfficialAddress =
+  property.official_listed_address &&
+  property.official_listed_address.toLowerCase() !== property.canonical_address.toLowerCase();
 
 function hasValue(value: unknown): boolean {
   return value !== null && value !== undefined && value !== "";
@@ -61,6 +65,27 @@ function displayArea(value: number | string | null | undefined): string {
 
 function displayAcres(value: number | string | null | undefined): string {
   return hasValue(value) ? `${formatNumber(value)} acres` : "Not listed";
+}
+
+function displayLabel(value: string | null | undefined): string {
+  if (!hasValue(value)) {
+    return "Not listed";
+  }
+  return String(value)
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function displayUnitBasis(source: string, confidence: string): string {
+  if (!source && !confidence) {
+    return "Not listed";
+  }
+  const confidenceLabel = displayLabel(confidence);
+  const sourceLabel = displayLabel(source);
+  if (confidence && source) {
+    return `${confidenceLabel} from ${sourceLabel}`;
+  }
+  return confidenceLabel !== "Not listed" ? confidenceLabel : sourceLabel;
 }
 
 const factRows = propertyFact
@@ -82,13 +107,17 @@ const factRows = propertyFact
       { label: "Finished Area", value: displayArea(propertyFact.finished_sqft) },
       { label: "Above Ground Area", value: displayArea(propertyFact.above_ground_area) },
       { label: "Below Ground Area", value: displayArea(propertyFact.below_ground_area) },
-      { label: "Total Units", value: displayText(propertyFact.total_units) },
+      { label: "Reported Units", value: displayText(propertyFact.total_units) },
+      { label: "Inferred Units", value: displayText(propertyFact.inferred_unit_count) },
+      { label: "Best Unit Count", value: displayText(propertyFact.best_unit_count) },
+      { label: "Unit Count Basis", value: displayUnitBasis(propertyFact.unit_count_source, propertyFact.unit_count_confidence) },
+      { label: "Assessed Value Per Unit", value: formatCurrency(propertyFact.assessed_value_per_unit) },
       { label: "Building Use", value: displayText(propertyFact.building_use) }
     ]
   : [];
 ---
 
-<Layout title={`${property.canonical_address || property.property_id} | Minneapolis Scattered-Site Housing Explorer`} description="Public record detail page for a scattered-site housing property.">
+<Layout title={`${pageTitle} | Minneapolis Housing Explorer`} description="Public record detail page for a Minneapolis housing property.">
   <section class="border-b border-line bg-paper">
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <a class="text-sm font-bold text-civic-green underline decoration-civic-leaf decoration-2 underline-offset-4" href={withBasePath("/properties/")}>
@@ -96,10 +125,20 @@ const factRows = propertyFact
       </a>
       <div class="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
+          {property.official_property_name && (
+            <p class="mb-2 text-sm font-bold uppercase tracking-normal text-civic-green">
+              {property.official_property_name}
+            </p>
+          )}
           <h1 class="text-3xl font-bold">{property.canonical_address || "Address unavailable"}</h1>
           <p class="mt-2 text-ink/70">
             {[property.city, property.state, property.zip].filter(Boolean).join(", ")}
           </p>
+          {hasDifferentOfficialAddress && (
+            <p class="mt-2 text-sm font-semibold text-ink/65">
+              MPHA listed address: {property.official_listed_address}
+            </p>
+          )}
         </div>
         <ConfidenceBadge level={property.confidence_level} score={property.confidence_score} />
       </div>
@@ -127,8 +166,16 @@ const factRows = propertyFact
             </div>
             <div><dt class="font-semibold text-ink/60">Owner</dt><dd>{property.current_owner_name || "Not listed"}</dd></div>
             <div><dt class="font-semibold text-ink/60">Taxpayer</dt><dd>{property.current_taxpayer_name || "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Official MPHA Name</dt><dd>{property.official_property_name || "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Official MPHA Address</dt><dd>{property.official_listed_address || "Not listed"}</dd></div>
             <div><dt class="font-semibold text-ink/60">Property Type</dt><dd>{property.property_type || "Not listed"}</dd></div>
             <div><dt class="font-semibold text-ink/60">Estimated Units</dt><dd>{property.estimated_unit_count ?? "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Unit Count Basis</dt><dd>{displayUnitBasis(property.unit_count_source, property.unit_count_confidence)}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Ward</dt><dd>{property.ward || "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Neighborhood</dt><dd>{property.neighborhood || "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Community</dt><dd>{property.community || "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Police Precinct</dt><dd>{property.police_precinct || "Not listed"}</dd></div>
+            <div><dt class="font-semibold text-ink/60">Police Sector</dt><dd>{property.police_sector || "Not listed"}</dd></div>
             <div><dt class="font-semibold text-ink/60">Current Status</dt><dd>{property.current_status || "Not listed"}</dd></div>
             <div><dt class="font-semibold text-ink/60">Current Record</dt><dd>{property.is_current ? "Yes" : "No"}</dd></div>
             <div><dt class="font-semibold text-ink/60">First Seen</dt><dd>{property.first_seen_date || "Not listed"}</dd></div>
@@ -136,6 +183,7 @@ const factRows = propertyFact
             <div><dt class="font-semibold text-ink/60">Latitude</dt><dd>{property.latitude ?? "Not listed"}</dd></div>
             <div><dt class="font-semibold text-ink/60">Longitude</dt><dd>{property.longitude ?? "Not listed"}</dd></div>
           </dl>
+          {property.unit_count_notes && <p class="mt-4 rounded border border-line p-4 text-ink/75">{property.unit_count_notes}</p>}
           {property.public_notes && <p class="mt-4 rounded border border-line p-4 text-ink/75">{property.public_notes}</p>}
         </section>
 

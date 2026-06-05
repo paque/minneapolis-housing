@@ -60,6 +60,24 @@
       "return_geometry": false,
       "row_count": 131978,
       "sha256_hash": "4da4c89d33dfea934a5ed8440cc47799d5c7eeac37421db3f4c741b1e25deb3e"
+    },
+    "mpha_properties_overview": {
+      "source_id": "mpha_properties_overview",
+      "raw_file_uri": "data/raw/source-snapshots/mpha_properties_overview.jsonl",
+      "retrieved_at": "2026-06-03T20:27:17Z",
+      "source_url": "https://mphaonline.org/properties/",
+      "row_count": 44,
+      "sha256_hash": "37f1c7847b04cdf562708e473298783e29ae30037c16e3ae84d5d39d20c17154"
+    },
+    "minneapolis_city_limits": {
+      "source_id": "minneapolis_city_limits",
+      "raw_file_uri": "data/raw/source-snapshots/minneapolis_city_limits.jsonl",
+      "retrieved_at": "2026-06-05T15:15:09Z",
+      "where": "1=1",
+      "out_fields": "*",
+      "return_geometry": true,
+      "row_count": 1,
+      "sha256_hash": "d07ebaff04454bf32b26e80bcb95bbd35258b4c2c619d8f7ed687aa88e97251b"
     }
   }
 }

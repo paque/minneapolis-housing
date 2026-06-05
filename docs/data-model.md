@@ -14,8 +14,19 @@ The public site uses generated files that reflect these logical entities. Public
 - `longitude`
 - `current_owner_name`
 - `current_taxpayer_name`
+- `official_property_name`
+- `official_listed_address`
+- `is_official_mpha_listing`
 - `property_type`
 - `estimated_unit_count`
+- `unit_count_source`
+- `unit_count_confidence`
+- `unit_count_notes`
+- `ward`
+- `neighborhood`
+- `community`
+- `police_precinct`
+- `police_sector`
 - `current_status`
 - `confidence_level`
 - `confidence_score`
@@ -101,9 +112,27 @@ The public site uses generated files that reflect these logical entities. Public
 - `above_ground_area`
 - `below_ground_area`
 - `total_units`
+- `inferred_unit_count`
+- `best_unit_count`
+- `unit_count_source`
+- `unit_count_confidence`
+- `unit_count_notes`
+- `assessed_value_per_unit`
 - `building_use`
 
 `property_facts.csv` has at most one row per `property_id`. The pipeline rejects duplicate fact rows and fact rows that reference an unknown property.
+
+Reported unit counts are used first. When reported counts are missing, the pipeline may publish conservative inferred counts from property type or building use, including vacant land as 0 units. Inferred values are identified by `unit_count_source`, `unit_count_confidence`, and `unit_count_notes`.
+
+## civic_boundaries
+
+`civic-boundaries.geojson` is a GeoJSON `FeatureCollection`. Each feature geometry is a city boundary, ward, neighborhood, community, police precinct, or MPD sector. Feature properties include:
+
+- `layer_id`
+- `layer_name`
+- `name`
+- `label`
+- `source_id`
 
 ## property_permits
 
@@ -143,6 +172,7 @@ The current MVP writes the latest ETL run metadata to `data/processed/etl-run-la
 - `properties.csv`: current property rows with confidence fields.
 - `properties.json`: `properties` array.
 - `properties.geojson`: point `FeatureCollection`; geometry is omitted for rows without latitude or longitude.
+- `civic-boundaries.geojson`: boundary `FeatureCollection` for city limits, wards, neighborhoods, communities, police precincts, and MPD sectors.
 - `property-facts.csv`: property-fact rows.
 - `property-facts.json`: `property_facts` array.
 - `property-permits.csv`: property-permit rows.

@@ -2,21 +2,32 @@
   "retrieved_at": "2026-06-03T20:27:17Z",
   "hud_mn002_building_records": 221,
   "hud_scattered_site_building_records": 15,
-  "hud_scattered_site_unmatched_to_parcel": 3,
+  "hud_scattered_site_unmatched_to_parcel": 4,
+  "mpha_portfolio_property_records": 44,
+  "mpha_portfolio_records_matched_to_parcels": 38,
+  "mpha_portfolio_records_unmatched_to_parcels": 5,
   "metrogis_minneapolis_parcel_records": 131117,
-  "metrogis_public_housing_name_candidates": 724,
-  "minneapolis_ccs_permit_records": 394329,
-  "minneapolis_ccs_permits_matched_to_properties": 1585,
+  "metrogis_public_housing_name_candidates": 727,
+  "minneapolis_ccs_permit_records": 394464,
+  "minneapolis_ccs_permits_matched_to_properties": 1571,
   "minneapolis_assessing_candidates_by_year": {
-    "2023": 669,
-    "2024": 669,
+    "2023": 670,
+    "2024": 670,
     "2025": 677
   },
-  "exported_properties": 738,
-  "exported_property_facts": 735,
-  "exported_property_permits": 1585,
-  "exported_evidence_rows": 3486,
-  "exported_change_events": 2764,
+  "civic_boundary_features": {
+    "city_limits": 1,
+    "wards": 13,
+    "neighborhoods": 87,
+    "communities": 11,
+    "police_precincts": 5,
+    "police_sectors": 8
+  },
+  "exported_properties": 739,
+  "exported_property_facts": 730,
+  "exported_property_permits": 1571,
+  "exported_evidence_rows": 3481,
+  "exported_change_events": 2753,
   "source_extracts": {
     "hud_public_housing_buildings_mn002": {
       "row_count": 221,
@@ -47,6 +58,16 @@
       "row_count": 131978,
       "raw_file_uri": "data/raw/source-snapshots/minneapolis_assessing_parcel_data_2025.jsonl",
       "sha256_hash": "4da4c89d33dfea934a5ed8440cc47799d5c7eeac37421db3f4c741b1e25deb3e"
+    },
+    "mpha_properties_overview": {
+      "row_count": 44,
+      "raw_file_uri": "data/raw/source-snapshots/mpha_properties_overview.jsonl",
+      "sha256_hash": "37f1c7847b04cdf562708e473298783e29ae30037c16e3ae84d5d39d20c17154"
+    },
+    "minneapolis_city_limits": {
+      "row_count": 1,
+      "raw_file_uri": "data/raw/source-snapshots/minneapolis_city_limits.jsonl",
+      "sha256_hash": "d07ebaff04454bf32b26e80bcb95bbd35258b4c2c619d8f7ed687aa88e97251b"
     }
   }
 }

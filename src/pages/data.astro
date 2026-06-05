@@ -35,11 +35,15 @@ type FetchSummary = {
   hud_mn002_building_records?: number;
   hud_scattered_site_building_records?: number;
   hud_scattered_site_unmatched_to_parcel?: number;
+  mpha_portfolio_property_records?: number;
+  mpha_portfolio_records_matched_to_parcels?: number;
+  mpha_portfolio_records_unmatched_to_parcels?: number;
   metrogis_minneapolis_parcel_records?: number;
   metrogis_public_housing_name_candidates?: number;
   minneapolis_ccs_permit_records?: number;
   minneapolis_ccs_permits_matched_to_properties?: number;
   minneapolis_assessing_candidates_by_year?: Record<string, number>;
+  civic_boundary_features?: Record<string, number>;
   exported_properties?: number;
   exported_property_facts?: number;
   exported_property_permits?: number;
@@ -114,6 +118,10 @@ const assessingCandidatesByYear = fetchSummary.minneapolis_assessing_candidates_
 const assessingCandidateText = Object.entries(assessingCandidatesByYear)
   .map(([year, count]) => `${year}: ${formatCount(count)}`)
   .join(" / ");
+const civicBoundaryFeatureCount = Object.values(fetchSummary.civic_boundary_features ?? {}).reduce(
+  (total, count) => total + (typeof count === "number" ? count : 0),
+  0 as number
+);
 const evidenceCountBySource = sources.property_evidence.reduce<Record<string, number>>((counts, evidence) => {
   counts[evidence.source_id] = (counts[evidence.source_id] ?? 0) + 1;
   return counts;
@@ -144,6 +152,54 @@ const sourceLineageDetails: Record<string, { description: string; extractionScop
     transformUse:
       "Publishes permit numbers, types, status, values, dates, unit changes, and redacted work descriptions."
   },
+  minneapolis_city_council_wards: {
+    description:
+      "City of Minneapolis ward boundary layer used for map overlays and property geography enrichment.",
+    extractionScope:
+      "Extract the public City Council ward boundary layer with geometry.",
+    transformUse:
+      "Publishes ward overlays and assigns each mapped property to a ward by point-in-polygon matching."
+  },
+  minneapolis_neighborhoods: {
+    description:
+      "City of Minneapolis neighborhood boundary layer used for map overlays and property geography enrichment.",
+    extractionScope:
+      "Extract the public neighborhood boundary layer with geometry.",
+    transformUse:
+      "Publishes neighborhood overlays and assigns each mapped property to a neighborhood by point-in-polygon matching."
+  },
+  minneapolis_communities: {
+    description:
+      "City of Minneapolis community boundary layer used for map overlays and property geography enrichment.",
+    extractionScope:
+      "Extract the public community boundary layer with geometry.",
+    transformUse:
+      "Publishes community overlays and assigns each mapped property to a community by point-in-polygon matching."
+  },
+  minneapolis_police_precincts: {
+    description:
+      "Minneapolis Police Department precinct boundary layer used for map overlays and property geography enrichment.",
+    extractionScope:
+      "Extract the public police precinct boundary layer with geometry.",
+    transformUse:
+      "Publishes precinct overlays and assigns each mapped property to a police precinct by point-in-polygon matching."
+  },
+  minneapolis_mpd_sectors: {
+    description:
+      "Minneapolis Police Department sector boundary layer used for map overlays and property geography enrichment.",
+    extractionScope:
+      "Extract the public MPD sector boundary layer with geometry.",
+    transformUse:
+      "Publishes MPD sector overlays and assigns each mapped property to a sector by point-in-polygon matching."
+  },
+  minneapolis_city_limits: {
+    description:
+      "City of Minneapolis city limits boundary layer used to show the full municipal boundary on the map.",
+    extractionScope:
+      "Extract the public city limits boundary layer with geometry.",
+    transformUse:
+      "Publishes the city limit overlay so users can see where Minneapolis begins and ends."
+  },
   minneapolis_assessing_parcels_2023: {
     description:
       "Annual Minneapolis assessing parcel table with owner, taxpayer, property type, building use, unit, value, and coordinate fields.",
@@ -170,11 +226,11 @@ const sourceLineageDetails: Record<string, { description: string; extractionScop
   },
   mpha_properties_overview: {
     description:
-      "MPHA public portfolio page describing scattered-site homes as CHR single-family and multiplex homes.",
+      "MPHA public portfolio page listing housing properties with names, addresses, AMP/CHR labels, property types, unit counts, and build years.",
     extractionScope:
-      "Public website citation used for portfolio context; no raw JSONL snapshot is generated.",
+      "Extract the official public properties list into a compact JSONL snapshot before matching listed addresses to parcel records.",
     transformUse:
-      "Adds portfolio context evidence and explains why CHR ownership names are relevant."
+      "Adds direct official portfolio evidence for listed high-rise and townhome properties, plus CHR scattered-site portfolio context."
   }
 };
 
@@ -211,6 +267,12 @@ const files = [
     label: "properties.geojson",
     rows: payload.properties.filter((property) => property.latitude !== null && property.longitude !== null).length,
     description: "Mapped property points for GIS tools and web maps."
+  },
+  {
+    href: withBasePath("/data/civic-boundaries.geojson"),
+    label: "civic-boundaries.geojson",
+    rows: civicBoundaryFeatureCount,
+    description: "City limits, ward, neighborhood, community, police precinct, and MPD sector boundary overlays."
   },
   {
     href: withBasePath("/data/property-facts.csv"),
@@ -267,7 +329,9 @@ const lineageStages = [
       `HUD public housing buildings: ${formatCount(fetchSummary.hud_mn002_building_records ?? rawSourceById.get("hud_public_housing_buildings_mn002")?.row_count)} rows`,
       `MetroGIS Minneapolis parcels: ${formatCount(fetchSummary.metrogis_minneapolis_parcel_records ?? rawSourceById.get("metrogis_hennepin_minneapolis_parcels_current")?.row_count)} rows`,
       `Minneapolis assessing 2023-2025: ${formatCount(assessingRawTotal)} rows`,
-      `Minneapolis CCS permits: ${formatCount(fetchSummary.minneapolis_ccs_permit_records ?? rawSourceById.get("minneapolis_ccs_permits_current")?.row_count)} rows`
+      `Minneapolis CCS permits: ${formatCount(fetchSummary.minneapolis_ccs_permit_records ?? rawSourceById.get("minneapolis_ccs_permits_current")?.row_count)} rows`,
+      `Civic boundary overlays: ${formatCount(civicBoundaryFeatureCount)} city limit, ward, neighborhood, community, precinct, and sector features`,
+      `MPHA properties overview: ${formatCount(fetchSummary.mpha_portfolio_property_records)} rows`
     ]
   },
   {
@@ -275,9 +339,10 @@ const lineageStages = [
     title: "Identify public-housing candidates",
     stat: `${formatCount(rowCounts.properties)} published properties`,
     text:
-      "Candidate logic runs after landing, so extraction stays broad and auditable while scattered-site filtering remains inspectable.",
+      "Candidate logic runs after landing, so extraction stays broad and auditable while public-housing portfolio matching remains inspectable.",
     items: [
       `HUD MN002 buildings to scattered-site development: ${formatCount(fetchSummary.hud_mn002_building_records)} to ${formatCount(fetchSummary.hud_scattered_site_building_records)} records`,
+      `MPHA overview records matched to parcels: ${formatCount(fetchSummary.mpha_portfolio_records_matched_to_parcels)}; preserved address-only: ${formatCount(fetchSummary.mpha_portfolio_records_unmatched_to_parcels)}`,
       `MetroGIS owner/taxpayer public-housing name matches: ${formatCount(fetchSummary.metrogis_public_housing_name_candidates)} parcels`,
       `Assessing owner/taxpayer match plus small residential filter: ${assessingCandidateText || "Not tracked"}`,
       `Permits matched only after final parcel set: ${formatCount(fetchSummary.minneapolis_ccs_permits_matched_to_properties)} records`
@@ -291,7 +356,9 @@ const lineageStages = [
       "Rows are converted into stable IDs and comparable fields before confidence labels and source-record changes are computed.",
     items: [
       "Parcel IDs are stripped to alphanumeric keys and addresses/names are cleaned.",
+      "Apartment and unit suffixes are stripped for parcel identity matching while source addresses remain in evidence.",
       "Hennepin HARN X/Y coordinates are projected to WGS84 for map points.",
+      "HUD and MPHA rows are consolidated to parcel-backed properties only when matching evidence is reliable.",
       "Evidence references must point to known properties and known sources.",
       "Confidence labels are computed from evidence strength and exclusion claims."
     ]
@@ -318,7 +385,7 @@ const sourceTargetMappings = [
     filter:
       "Participant MN002 is extracted; development MN002000002 / Scattered Sites becomes direct evidence.",
     transform:
-      "Building points are matched to MetroGIS parcels when possible; unmatched HUD scattered-site records are preserved.",
+      "Building addresses are matched to parcels first after unit-suffix stripping; point geometry is used only when the parcel owner/taxpayer also matches public-housing patterns.",
     targets: "properties, properties.geojson, sources, property-history"
   },
   {
@@ -349,18 +416,27 @@ const sourceTargetMappings = [
     targets: "property-permits.csv, property-permits.json"
   },
   {
-    source: "MPHA Properties Overview",
-    raw: "Context citation",
+    source: "Civic Boundary Overlays",
+    raw: `${formatCount(civicBoundaryFeatureCount)} boundary features`,
     filter:
-      "The public page is used as portfolio context for CHR single-family and multiplex scattered-site homes.",
+      "City limits, wards, neighborhoods, communities, police precincts, and MPD sectors are landed as public boundary layers.",
     transform:
-      "Adds low-weight portfolio context evidence so ownership-name matches are interpretable.",
+      "Boundaries are normalized into one GeoJSON file; mapped properties receive geography labels through point-in-polygon matching.",
+    targets: "civic-boundaries.geojson, properties, properties.geojson, property detail pages, map filters, explorer"
+  },
+  {
+    source: "MPHA Properties Overview",
+    raw: `${formatCount(fetchSummary.mpha_portfolio_property_records)} listed rows`,
+    filter:
+      "The official public page is parsed into a raw JSONL snapshot, including high-rise, townhome, and scattered-site entries.",
+    transform:
+      `Listed addresses are matched by exact and conservative normalized-address rules; ${formatCount(fetchSummary.mpha_portfolio_records_unmatched_to_parcels)} official rows are preserved without coordinates until a reliable parcel match is found.`,
     targets: "sources, properties"
   }
 ];
 ---
 
-<Layout title="Data Lineage & Downloads | Minneapolis Scattered-Site Housing Explorer" description="Download data and review source lineage for the scattered-site housing explorer.">
+<Layout title="Data Lineage & Downloads | Minneapolis Public Housing Explorer" description="Download data and review source lineage for the public housing explorer.">
   <section class="border-b border-line bg-paper">
     <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_0.85fr] lg:px-8">
       <div>
@@ -438,7 +514,7 @@ const sourceTargetMappings = [
         </div>
       </div>
 
-      <div class="mt-8 grid gap-4 lg:grid-cols-3">
+      <div class="mt-8 grid gap-4 lg:grid-cols-4">
         <article class="rounded border border-line p-4">
           <h3 class="font-bold">Candidate Rules</h3>
           <p class="mt-2 text-sm leading-6 text-ink/70">
@@ -449,6 +525,12 @@ const sourceTargetMappings = [
           <h3 class="font-bold">Confidence Labels</h3>
           <p class="mt-2 text-sm leading-6 text-ink/70">
             Direct HUD scattered-site evidence can confirm a property. Owner/taxpayer, parcel, and portfolio evidence contribute scores for likely or uncertain labels. Exclusion claims override inclusion.
+          </p>
+        </article>
+        <article class="rounded border border-line p-4">
+          <h3 class="font-bold">Consolidation Rules</h3>
+          <p class="mt-2 text-sm leading-6 text-ink/70">
+            Parcel ID is the primary identity key. HUD and MPHA rows merge into parcel-backed properties by exact or conservative normalized-address rules; ambiguous rows stay address-only until documented evidence supports a match.
           </p>
         </article>
         <article class="rounded border border-line p-4">

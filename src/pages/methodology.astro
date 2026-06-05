@@ -3,12 +3,12 @@ import Layout from "@components/Layout.astro";
 import { confidenceDefinitions } from "@lib/confidence";
 ---
 
-<Layout title="Methodology | Minneapolis Scattered-Site Housing Explorer" description="How scattered-site housing records are compiled and categorized.">
+<Layout title="Methodology | Minneapolis Public Housing Explorer" description="How Minneapolis public housing records are compiled and categorized.">
   <section class="border-b border-line bg-paper">
     <div class="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
       <h1 class="text-3xl font-bold">Methodology</h1>
       <p class="mt-4 text-lg leading-8 text-ink/75">
-        This site compiles public records that identify or suggest Minneapolis scattered-site housing properties, then labels each record according to the strength of the available evidence.
+        This site compiles public records that identify or suggest Minneapolis public housing properties, then labels each record according to the strength of the available evidence.
       </p>
     </div>
   </section>
@@ -18,7 +18,7 @@ import { confidenceDefinitions } from "@lib/confidence";
       <article>
         <h2 class="text-2xl font-bold">Sources Used</h2>
         <p class="mt-3 text-ink/70">
-          Records are drawn from official or documented public sources, including HUD public housing building records, City of Minneapolis assessing records, Hennepin/MetroGIS parcel records, City of Minneapolis Construction and Code Services permit records, and MPHA public portfolio information.
+          Records are drawn from official or documented public sources, including HUD public housing building records, City of Minneapolis assessing records, Hennepin/MetroGIS parcel records, City of Minneapolis Construction and Code Services permit records, MPHA public portfolio information, and City of Minneapolis civic boundary layers.
         </p>
       </article>
 
@@ -33,6 +33,20 @@ import { confidenceDefinitions } from "@lib/confidence";
         <h2 class="text-2xl font-bold">Parcel Facts And Permits</h2>
         <p class="mt-3 text-ink/70">
           Parcel facts are condensed from the current MetroGIS open parcel layer and the latest Minneapolis assessing table into property-facts.csv and property-facts.json. Construction permits are landed as a full public source snapshot, then matched to exported properties by normalized parcel APN after extraction and published as property-permits.csv and property-permits.json. The public permit output includes permit numbers, type, status, value, issue and completion dates, unit changes, and work comments.
+        </p>
+      </article>
+
+      <article>
+        <h2 class="text-2xl font-bold">Civic Geography</h2>
+        <p class="mt-3 text-ink/70">
+          City limits, wards, neighborhoods, communities, police precincts, and MPD sectors are landed as separate boundary snapshots and published as civic-boundaries.geojson. Property points are spatially joined to those layers so the map, property detail pages, property search filters, and explorer summaries can use the same ward and neighborhood context.
+        </p>
+      </article>
+
+      <article>
+        <h2 class="text-2xl font-bold">Unit Count Basis</h2>
+        <p class="mt-3 text-ink/70">
+          Reported public-source unit counts are used first. When a count is missing, the pipeline applies conservative property-type or building-use inference, such as vacant land to 0 units or duplex to 2 units. Inferred counts are labeled with source, confidence, and notes so totals, assessed value per unit, and geography summaries can be reviewed with that context.
         </p>
       </article>
 
@@ -58,7 +72,7 @@ import { confidenceDefinitions } from "@lib/confidence";
       <article>
         <h2 class="text-2xl font-bold">Known Limitations</h2>
         <p class="mt-3 text-ink/70">
-          Public records can disagree, lag behind recent transactions, or describe ownership without directly identifying scattered-site use. Permit and parcel enrichment explains public context for a parcel, but it does not independently prove scattered-site status. Properties labeled likely should be reviewed against the cited sources before being treated as confirmed.
+          Public records can disagree, lag behind recent transactions, or describe ownership without directly identifying a specific MPHA program or building. Permit, parcel, boundary, and unit-count enrichment explains public context for a parcel, but it does not independently prove portfolio status. Inferred unit counts are best-effort public-record estimates, not occupancy or resident counts. Properties labeled likely should be reviewed against the cited sources before being treated as confirmed.
         </p>
       </article>
     </div>

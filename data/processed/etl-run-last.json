@@ -1,17 +1,38 @@
 {
-  "run_id": "20260603T212113Z",
-  "started_at": "2026-06-03T21:21:13Z",
-  "completed_at": "2026-06-03T21:21:14Z",
+  "run_id": "20260605T152134Z",
+  "started_at": "2026-06-05T15:21:34Z",
+  "completed_at": "2026-06-05T15:21:34Z",
   "status": "success",
-  "git_commit": "",
+  "git_commit": "58413b1945b2821a815f3d30bc94375835ca3aaf",
   "row_counts": {
-    "properties": 738,
-    "property_versions": 738,
-    "source_records": 7,
-    "property_evidence": 3486,
-    "change_events": 2764,
-    "property_facts": 735,
-    "property_permits": 1585
+    "properties": 739,
+    "property_versions": 739,
+    "source_records": 13,
+    "property_evidence": 3481,
+    "change_events": 2753,
+    "property_facts": 730,
+    "property_permits": 1571
   },
-  "warnings": []
+  "warnings": [
+    {
+      "code": "missing_coordinates",
+      "message": "Property mpha-portfolio-charles-horn-towers-115-west-31st-street has no latitude/longitude and will not appear on the map"
+    },
+    {
+      "code": "missing_coordinates",
+      "message": "Property mpha-portfolio-elliot-twins-apartments-1225-south-8th-street has no latitude/longitude and will not appear on the map"
+    },
+    {
+      "code": "missing_coordinates",
+      "message": "Property mpha-portfolio-hiawatha-towers-apartments-1700-east-22nd-street has no latitude/longitude and will not appear on the map"
+    },
+    {
+      "code": "missing_coordinates",
+      "message": "Property mpha-portfolio-hiawatha-towers-apartments-2019-south-16th-avenue has no latitude/longitude and will not appear on the map"
+    },
+    {
+      "code": "missing_coordinates",
+      "message": "Property mpha-portfolio-charles-horn-towers-3110-south-blaisdell-avenue has no latitude/longitude and will not appear on the map"
+    }
+  ]
 }

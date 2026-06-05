@@ -8,7 +8,7 @@ const payload = await getPropertiesPayload();
 const styleUrl = withBasePath(import.meta.env.PUBLIC_BASEMAP_STYLE_URL ?? "/data/map-style.json");
 ---
 
-<Layout title="Map | Minneapolis Scattered-Site Housing Explorer" description="Map of Minneapolis scattered-site housing property records.">
+<Layout title="Map | Minneapolis Public Housing Explorer" description="Map of Minneapolis public housing property records.">
   <section class="bg-paper px-4 py-6 sm:px-6 lg:px-8">
     <div class="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
       <div>
@@ -23,5 +23,11 @@ const styleUrl = withBasePath(import.meta.env.PUBLIC_BASEMAP_STYLE_URL ?? "/data
     </div>
   </section>
 
-  <PropertyMap client:only="react" dataUrl={withBasePath("/data/properties.geojson")} styleUrl={styleUrl} />
+  <PropertyMap
+    client:only="react"
+    dataUrl={withBasePath("/data/properties.geojson")}
+    boundaryDataUrl={withBasePath("/data/civic-boundaries.geojson")}
+    sourceDataUrl={withBasePath("/data/sources.json")}
+    styleUrl={styleUrl}
+  />
 </Layout>

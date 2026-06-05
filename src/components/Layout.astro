@@ -3,8 +3,8 @@ import "../styles/global.css";
 import { withBasePath } from "@lib/urls";
 
 const {
-  title = "Minneapolis Scattered-Site Housing Explorer",
-  description = "Explore public records for Minneapolis scattered-site housing properties."
+  title = "Minneapolis Public Housing Explorer",
+  description = "Explore public records for Minneapolis public housing properties."
 } = Astro.props as {
   title?: string;
   description?: string;
@@ -14,6 +14,7 @@ const navItems = [
   { href: withBasePath("/"), label: "Home" },
   { href: withBasePath("/map/"), label: "Map" },
   { href: withBasePath("/properties/"), label: "Properties" },
+  { href: withBasePath("/explorer/"), label: "Explorer" },
   { href: withBasePath("/methodology/"), label: "Methodology" },
   { href: withBasePath("/data/"), label: "Data" }
 ];
@@ -31,7 +32,7 @@ const navItems = [
     <header class="border-b border-line bg-paper/95">
       <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
         <a href={withBasePath("/")} class="max-w-xl">
-          <span class="block text-base font-bold text-ink">Minneapolis Scattered-Site Housing Explorer</span>
+          <span class="block text-base font-bold text-ink">Minneapolis Public Housing Explorer</span>
           <span class="block text-sm text-ink/65">Property records, parcels, sources, and lineage</span>
         </a>
         <nav aria-label="Primary navigation">

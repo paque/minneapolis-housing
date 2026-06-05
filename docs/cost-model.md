@@ -18,11 +18,12 @@ The MVP cost model is static hosting plus GitHub Actions. There is no live datab
 
 The latest successful ETL run in this checkout produced:
 
-- 738 property rows.
-- 735 property-fact rows.
-- 1,585 matched permit rows.
-- 3,486 evidence rows.
-- 2,764 change events.
+- 739 property rows.
+- 730 property-fact rows.
+- 1,571 matched permit rows.
+- 3,481 evidence rows.
+- 2,753 change events.
+- 125 civic boundary features.
 
 ## Why Static Files
 

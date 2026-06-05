@@ -52,6 +52,7 @@ OPTIONAL_INPUT_FILES = {
     "change_events": "data/raw/change_events.csv",
     "property_facts": "data/raw/property_facts.csv",
     "property_permits": "data/raw/property_permits.csv",
+    "civic_boundaries": "data/raw/civic-boundaries.geojson",
 }
 
 PROPERTY_FACT_FLOAT_FIELDS = {
@@ -65,12 +66,15 @@ PROPERTY_FACT_FLOAT_FIELDS = {
     "finished_sqft",
     "above_ground_area",
     "below_ground_area",
+    "assessed_value_per_unit",
 }
 PROPERTY_FACT_INT_FIELDS = {
     "tax_year",
     "market_year",
     "year_built",
     "total_units",
+    "inferred_unit_count",
+    "best_unit_count",
 }
 PROPERTY_PERMIT_FLOAT_FIELDS = {"value"}
 PROPERTY_PERMIT_INT_FIELDS = {"dwelling_units_new", "dwelling_units_eliminated"}
@@ -113,6 +117,15 @@ def read_optional_csv(path: Path, required_fields: list[str]) -> list[dict[str, 
     if not path.exists():
         return []
     return read_csv(path, required_fields)
+
+
+def read_optional_json(path: Path, fallback: dict[str, Any]) -> dict[str, Any]:
+    if not path.exists():
+        return fallback
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise PipelineInputError(f"Invalid JSON file: {path}") from exc
 
 
 def validate_required_values(
@@ -394,6 +407,15 @@ def normalize_properties(
             raise PipelineInputError(f"Invalid is_current on row {index}: {exc}") from exc
 
         try:
+            is_official_mpha_listing = (
+                parse_bool(row.get("is_official_mpha_listing"))
+                if clean_text(row.get("is_official_mpha_listing"))
+                else False
+            )
+        except ValueError as exc:
+            raise PipelineInputError(f"Invalid is_official_mpha_listing on row {index}: {exc}") from exc
+
+        try:
             estimated_unit_count = parse_int_or_none(row.get("estimated_unit_count"))
         except ValueError as exc:
             raise PipelineInputError(
@@ -430,8 +452,19 @@ def normalize_properties(
             "longitude": longitude,
             "current_owner_name": clean_text(row.get("current_owner_name")),
             "current_taxpayer_name": clean_text(row.get("current_taxpayer_name")),
+            "official_property_name": clean_text(row.get("official_property_name")),
+            "official_listed_address": normalize_address(row.get("official_listed_address")),
+            "is_official_mpha_listing": is_official_mpha_listing,
             "property_type": clean_text(row.get("property_type")),
             "estimated_unit_count": estimated_unit_count,
+            "unit_count_source": clean_text(row.get("unit_count_source")),
+            "unit_count_confidence": clean_text(row.get("unit_count_confidence")),
+            "unit_count_notes": clean_text(row.get("unit_count_notes")),
+            "ward": clean_text(row.get("ward")),
+            "neighborhood": clean_text(row.get("neighborhood")),
+            "community": clean_text(row.get("community")),
+            "police_precinct": clean_text(row.get("police_precinct")),
+            "police_sector": clean_text(row.get("police_sector")),
             "current_status": clean_text(row.get("current_status")),
             "confidence_level": confidence_level,
             "confidence_score": confidence_score,
@@ -447,6 +480,8 @@ def normalize_properties(
             property_id,
             parcel_id,
             address,
+            property_record["official_property_name"],
+            property_record["official_listed_address"],
             property_record["current_owner_name"],
             property_record["current_taxpayer_name"],
             property_record["current_status"],
@@ -571,6 +606,17 @@ def run_pipeline(project_root: Path) -> int:
         project_root / OPTIONAL_INPUT_FILES["property_permits"],
         PROPERTY_PERMIT_FIELDS,
     )
+    civic_boundaries = read_optional_json(
+        project_root / OPTIONAL_INPUT_FILES["civic_boundaries"],
+        {
+            "type": "FeatureCollection",
+            "metadata": {
+                "schema_version": "1.0.0",
+                "generated_at": None,
+            },
+            "features": [],
+        },
+    )
 
     validate_required_values(property_rows, PROPERTY_REQUIRED_VALUES, "properties_source.csv")
     validate_required_values(source_rows, SOURCE_REQUIRED_VALUES, "source_records.csv")
@@ -611,6 +657,7 @@ def run_pipeline(project_root: Path) -> int:
         change_events=change_events,
         property_facts=property_facts,
         property_permits=property_permits,
+        civic_boundaries=civic_boundaries,
     )
 
     run = PipelineRun(

@@ -4,15 +4,15 @@ The pipeline lands public source snapshots first, transforms those snapshots int
 
 ## Current Checkout
 
-The current source fetch was retrieved at `2026-06-03T20:27:17Z`. The latest successful ETL run completed at `2026-06-03T21:21:14Z` with these row counts:
+The current source fetch was retrieved at `2026-06-03T20:27:17Z`, with the city limits layer refreshed at `2026-06-05T15:15:09Z`. The latest successful ETL run completed at `2026-06-05T15:21:34Z` with these row counts:
 
-- `properties`: 738
-- `property_versions`: 738
-- `source_records`: 7
-- `property_evidence`: 3,486
-- `change_events`: 2,764
-- `property_facts`: 735
-- `property_permits`: 1,585
+- `properties`: 739
+- `property_versions`: 739
+- `source_records`: 13
+- `property_evidence`: 3,481
+- `change_events`: 2,753
+- `property_facts`: 730
+- `property_permits`: 1,571
 
 The counts above come from `data/processed/etl-run-last.json`. Source extraction counts and snapshot hashes are in `data/raw/fetch-summary.json`.
 
@@ -53,9 +53,29 @@ Current source adapters:
 - `metrogis_hennepin_minneapolis_parcels_current`: Minnesota Geospatial Commons / MetroGIS open parcels where `ctu_name='Minneapolis' AND co_name='Hennepin'`; transform logic filters owner and taxpayer names after landing.
 - `minneapolis_ccs_permits_current`: City of Minneapolis Construction and Code Services permits with `where=1=1`; transform logic matches public permit records to exported properties by normalized parcel APN.
 - `minneapolis_assessing_parcels_2023`, `minneapolis_assessing_parcels_2024`, and `minneapolis_assessing_parcels_2025`: City of Minneapolis annual assessing parcel tables with `where=1=1`; transform logic normalizes parcel IDs, addresses, owner/taxpayer names, property types, unit counts, and Hennepin County HARN X/Y coordinates.
-- `mpha_properties_overview`: MPHA properties page context written as a source record; it supports portfolio context and does not confirm an individual parcel without parcel-level evidence.
+- `mpha_properties_overview`: official MPHA properties overview parsed into `mpha_properties_overview.jsonl`; listed high-rise and townhome properties can confirm official portfolio records when matched, while the scattered-site entry provides CHR portfolio context.
+- `minneapolis_city_limits`, `minneapolis_city_council_wards`, `minneapolis_neighborhoods`, `minneapolis_communities`, `minneapolis_police_precincts`, and `minneapolis_mpd_sectors`: City of Minneapolis boundary layers used for map overlays and property geography enrichment.
 
 The fetcher does not request resident demographic, tenant, household, voucher, or resident occupancy records. Public permit exports omit applicant names, applicant addresses, phone numbers, and emails.
+
+## Property Identity And Dedupe
+
+The transformed `properties_source.csv` is property-level, not source-row-level. The ETL consolidates source records into one property when reliable parcel identity exists.
+
+General rules:
+
+- Use normalized parcel ID as the strongest identity key.
+- Match HUD scattered-site records to parcels by unique exact normalized address before using point geometry. Strip apartment/unit suffixes for this identity match.
+- Use HUD point geometry only when the point parcel owner or taxpayer also matches public-housing patterns.
+- Match MPHA overview listings by exact address first, then conservative address fallbacks: direction-insensitive exact address, same-street public-housing candidate plus matching unit count, or a nearby same-street MPHA-owned candidate.
+- Keep source-specific addresses in evidence notes or official listed-address fields when they differ from the parcel canonical address.
+- Preserve unmatched HUD and MPHA rows as address-only records instead of inventing parcel IDs.
+
+One-off rules:
+
+- Do not add silent alias guesses in code.
+- A one-off alias or campus-address override must document the source address, chosen parcel ID, public evidence, and reason the generalized rules are insufficient.
+- Until a one-off is documented, leave the source row address-only or unmatched.
 
 ## Inputs
 
@@ -78,7 +98,7 @@ Raw JSONL snapshots in `data/raw/source-snapshots/` are generated and git-ignore
 `properties_source.csv`
 
 ```csv
-property_id,canonical_address,city,state,zip,parcel_id,latitude,longitude,current_owner_name,current_taxpayer_name,property_type,estimated_unit_count,current_status,public_notes,first_seen_date,last_seen_date,is_current,detail_url_slug
+property_id,canonical_address,city,state,zip,parcel_id,latitude,longitude,current_owner_name,current_taxpayer_name,official_property_name,official_listed_address,is_official_mpha_listing,property_type,estimated_unit_count,unit_count_source,unit_count_confidence,unit_count_notes,ward,neighborhood,community,police_precinct,police_sector,current_status,public_notes,first_seen_date,last_seen_date,is_current,detail_url_slug
 ```
 
 `source_records.csv`
@@ -102,7 +122,7 @@ event_id,property_id,event_date,event_type,old_value,new_value,source_id,public_
 `property_facts.csv`
 
 ```csv
-property_id,parcel_id,source_ids,sale_date,sale_value,assessed_land_value,assessed_building_value,assessed_total_value,tax_year,market_year,total_tax,use_classes,zoning,land_use,parcel_area_sqft,acres,year_built,finished_sqft,above_ground_area,below_ground_area,total_units,building_use
+property_id,parcel_id,source_ids,sale_date,sale_value,assessed_land_value,assessed_building_value,assessed_total_value,tax_year,market_year,total_tax,use_classes,zoning,land_use,parcel_area_sqft,acres,year_built,finished_sqft,above_ground_area,below_ground_area,total_units,inferred_unit_count,best_unit_count,unit_count_source,unit_count_confidence,unit_count_notes,assessed_value_per_unit,building_use
 ```
 
 `property_permits.csv`
@@ -118,6 +138,7 @@ The pipeline writes these files to `data/public/` and copies the same files to `
 - `properties.csv`
 - `properties.json`
 - `properties.geojson`
+- `civic-boundaries.geojson`
 - `property-facts.csv`
 - `property-facts.json`
 - `property-permits.csv`

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This project is a public civic data website and data pipeline for exploring Minneapolis Public Housing Authority / Community Housing Resources scattered-site housing properties. The product helps users inspect where properties are, what public records identify them, and how the portfolio changes over time.
+This project is a public civic data website and data pipeline for exploring Minneapolis Public Housing Authority / Community Housing Resources public housing properties. The product helps users inspect where properties are, what public records identify them, and how the portfolio changes over time.
 
 ## Stack
 
@@ -66,7 +66,7 @@ The website reads these files at build time or in the browser. Keep changes insp
 
 ## Confidence Labels
 
-- `confirmed`: Direct public-source evidence identifies the property as MPHA/CHR scattered-site housing or equivalent.
+- `confirmed`: Direct public-source evidence identifies the property as an MPHA/CHR public housing property.
 - `likely`: Owner, taxpayer, parcel, or address evidence strongly suggests inclusion.
 - `uncertain`: Evidence is weak, incomplete, stale, or conflicting.
 - `excluded`: Evidence suggests the property should not be included.

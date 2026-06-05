@@ -1,17 +1,41 @@
 ---
 import ConfidenceBadge from "./ConfidenceBadge.astro";
 import { getMinneapolisParcelUrl, getPropertyHref, type PropertyRecord } from "@lib/properties";
+import { sourceCategoryLabels, type EvidenceSourceCategory } from "@lib/sourceCategories";
 
-const { property } = Astro.props as { property: PropertyRecord };
+const { property, sourceCategories = [] } = Astro.props as {
+  property: PropertyRecord;
+  sourceCategories?: EvidenceSourceCategory[];
+};
 const href = getPropertyHref(property);
 const parcelUrl = getMinneapolisParcelUrl(property.parcel_id);
+const hasDifferentOfficialAddress =
+  property.official_listed_address &&
+  property.official_listed_address.toLowerCase() !== property.canonical_address.toLowerCase();
+const sourceCategoryText = sourceCategories
+  .map((category) => sourceCategoryLabels[category])
+  .filter(Boolean)
+  .join(" ");
 const searchable = [
+  property.official_property_name,
+  property.official_listed_address,
   property.canonical_address,
   property.parcel_id,
   property.current_owner_name,
   property.current_taxpayer_name,
   property.current_status,
-  property.confidence_level
+  property.confidence_level,
+  property.property_type,
+  property.ward,
+  property.neighborhood,
+  property.community,
+  property.police_precinct,
+  property.police_sector,
+  property.city,
+  property.state,
+  property.zip,
+  property.estimated_unit_count,
+  sourceCategoryText
 ]
   .join(" ")
   .toLowerCase();
@@ -20,17 +44,36 @@ const searchable = [
 <article
   class="rounded border border-line bg-white p-4 shadow-sm"
   data-property-card
+  data-address={property.canonical_address.toLowerCase()}
   data-confidence={property.confidence_level}
+  data-current={property.is_current ? "true" : "false"}
+  data-last-seen={property.last_seen_date}
+  data-score={property.confidence_score}
   data-search={searchable}
+  data-source-categories={sourceCategories.length > 0 ? `|${sourceCategories.join("|")}|` : ""}
+  data-units={property.estimated_unit_count ?? ""}
+  data-ward={property.ward}
+  data-neighborhood={property.neighborhood}
+  data-community={property.community}
+  data-precinct={property.police_precinct}
+  data-sector={property.police_sector}
 >
   <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
     <div>
+      {property.official_property_name && (
+        <p class="mb-1 text-sm font-bold text-civic-green">{property.official_property_name}</p>
+      )}
       <a class="text-lg font-semibold text-ink underline decoration-civic-leaf decoration-2 underline-offset-4 hover:text-civic-green" href={href}>
         {property.canonical_address || "Address unavailable"}
       </a>
       <p class="mt-1 text-sm text-ink/70">
         {[property.city, property.state, property.zip].filter(Boolean).join(", ")}
       </p>
+      {hasDifferentOfficialAddress && (
+        <p class="mt-1 text-sm text-ink/60">
+          MPHA listed address: {property.official_listed_address}
+        </p>
+      )}
     </div>
     <ConfidenceBadge level={property.confidence_level} score={property.confidence_score} />
   </div>
@@ -59,6 +102,14 @@ const searchable = [
     <div>
       <dt class="font-semibold text-ink/60">Units</dt>
       <dd>{property.estimated_unit_count ?? "Not listed"}</dd>
+    </div>
+    <div>
+      <dt class="font-semibold text-ink/60">Ward</dt>
+      <dd>{property.ward || "Not listed"}</dd>
+    </div>
+    <div>
+      <dt class="font-semibold text-ink/60">Neighborhood</dt>
+      <dd>{property.neighborhood || "Not listed"}</dd>
     </div>
   </dl>
 </article>

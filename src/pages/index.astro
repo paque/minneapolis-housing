@@ -2,7 +2,10 @@
 import Layout from "@components/Layout.astro";
 import ConfidenceBadge from "@components/ConfidenceBadge.astro";
 import {
+  formatCurrency,
   formatGeneratedAt,
+  formatNumber,
+  getPropertyFacts,
   getPropertiesPayload,
   getSources
 } from "@lib/properties";
@@ -11,10 +14,36 @@ import { withBasePath } from "@lib/urls";
 
 const payload = await getPropertiesPayload();
 const sources = await getSources();
+const facts = await getPropertyFacts();
 const currentCount = payload.properties.filter((property) => property.is_current).length;
 const mappedCount = payload.properties.filter(
   (property) => property.latitude !== null && property.longitude !== null
 ).length;
+const factsByProperty = new Map(facts.property_facts.map((fact) => [fact.property_id, fact]));
+const currentProperties = payload.properties.filter((property) => property.is_current);
+const totalEstimatedUnits = currentProperties.reduce(
+  (total, property) => total + (property.estimated_unit_count ?? 0),
+  0
+);
+const inferredUnitProperties = currentProperties.filter(
+  (property) => property.unit_count_source === "building_use_inference"
+    || property.unit_count_source === "property_type_inference"
+).length;
+const wardRollups = Object.values(
+  currentProperties.reduce<Record<string, { ward: string; properties: number; units: number; assessedTotal: number }>>(
+    (rollups, property) => {
+      const ward = property.ward || "Ward not listed";
+      const fact = factsByProperty.get(property.property_id);
+      const rollup = rollups[ward] ?? { ward, properties: 0, units: 0, assessedTotal: 0 };
+      rollup.properties += 1;
+      rollup.units += property.estimated_unit_count ?? 0;
+      rollup.assessedTotal += fact?.assessed_total_value ?? 0;
+      rollups[ward] = rollup;
+      return rollups;
+    },
+    {}
+  )
+).sort((left, right) => right.units - left.units || left.ward.localeCompare(right.ward, "en-US", { numeric: true }));
 const byConfidence = payload.properties.reduce<Record<string, number>>((counts, property) => {
   counts[property.confidence_level] = (counts[property.confidence_level] ?? 0) + 1;
   return counts;
@@ -22,20 +51,20 @@ const byConfidence = payload.properties.reduce<Record<string, number>>((counts, 
 ---
 
 <Layout
-  title="Minneapolis Scattered-Site Housing Explorer"
-  description="Explore public records for Minneapolis scattered-site housing properties."
+  title="Minneapolis Public Housing Explorer"
+  description="A public-records index for Minneapolis public housing properties."
 >
   <section class="border-b border-line bg-paper">
     <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-8">
       <div>
         <p class="text-sm font-bold uppercase tracking-normal text-civic-green">
-          Minneapolis scattered-site housing records
+          Minneapolis public housing records
         </p>
         <h1 class="mt-4 max-w-4xl text-4xl font-bold leading-tight text-ink sm:text-5xl">
-          Explore Minneapolis scattered-site housing properties.
+          A clearer public record of Minneapolis public housing.
         </h1>
         <p class="mt-5 max-w-3xl text-lg leading-8 text-ink/75">
-          Search addresses, parcel identifiers, ownership records, confidence labels, and changes over time from public sources.
+          Public materials describe a large citywide portfolio, but there is no simple property-level index for residents, researchers, journalists, or public agencies to review. This project organizes official MPHA listings, addresses, parcel identifiers, ownership records, confidence labels, and changes over time from public sources.
         </p>
         <div class="mt-7 flex flex-wrap gap-3">
           <a class="rounded bg-civic-green px-4 py-3 text-sm font-bold text-white hover:bg-civic-green/90" href={withBasePath("/map/")}>
@@ -69,6 +98,14 @@ const byConfidence = payload.properties.reduce<Record<string, number>>((counts, 
             <dt class="font-semibold text-ink/60">Public sources</dt>
             <dd class="text-3xl font-bold">{sources.source_records.length.toLocaleString()}</dd>
           </div>
+          <div>
+            <dt class="font-semibold text-ink/60">Best-unit total</dt>
+            <dd class="text-3xl font-bold">{totalEstimatedUnits.toLocaleString()}</dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-ink/60">Unit counts inferred</dt>
+            <dd class="text-3xl font-bold">{inferredUnitProperties.toLocaleString()}</dd>
+          </div>
         </dl>
         <p class="mt-4 text-sm text-ink/65">
           Updated: {formatGeneratedAt(payload.generated_at)}
@@ -83,6 +120,74 @@ const byConfidence = payload.properties.reduce<Record<string, number>>((counts, 
   </section>
 
   <section class="bg-white">
+    <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:px-8">
+      <div>
+        <p class="text-sm font-bold uppercase tracking-normal text-civic-green">
+          Why this exists
+        </p>
+        <h2 class="mt-3 text-2xl font-bold">Make a dispersed portfolio easier to inspect.</h2>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div class="rounded border border-line p-4">
+          <h3 class="font-bold">Counts are public</h3>
+          <p class="mt-3 text-sm leading-6 text-ink/70">
+            MPHA public materials list high-rise, townhome, and scattered-site housing across Minneapolis.
+          </p>
+        </div>
+        <div class="rounded border border-line p-4">
+          <h3 class="font-bold">Listings are fragmented</h3>
+          <p class="mt-3 text-sm leading-6 text-ink/70">
+            Property-level information is spread across separate public records, parcel data, owner records, permits, and change notices.
+          </p>
+        </div>
+        <div class="rounded border border-line p-4">
+          <h3 class="font-bold">Evidence is inspectable</h3>
+          <p class="mt-3 text-sm leading-6 text-ink/70">
+            The site gathers those records into an address-by-address index with source citations and confidence labels.
+          </p>
+        </div>
+      </div>
+      <p class="text-sm leading-6 text-ink/65 lg:col-start-2">
+        This is a public-records project, not a resident database. It publishes property-level information only, with a focus on transparency, source lineage, and reproducible updates.
+      </p>
+    </div>
+  </section>
+
+  <section class="border-t border-line bg-white">
+    <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[0.75fr_1.25fr] lg:px-8">
+      <div>
+        <p class="text-sm font-bold uppercase tracking-normal text-civic-green">Units and geography</p>
+        <h2 class="mt-3 text-2xl font-bold">Ward-level unit estimates are now inspectable.</h2>
+        <p class="mt-3 text-ink/70">
+          Reported unit counts are used first. When a count is missing, public property-type or building-use labels provide conservative inferred counts, including vacant land as 0 units.
+        </p>
+      </div>
+      <div class="overflow-x-auto rounded border border-line">
+        <table class="min-w-full divide-y divide-line text-sm">
+          <thead class="bg-paper text-left text-xs font-bold uppercase tracking-normal text-ink/60">
+            <tr>
+              <th class="px-4 py-3">Ward</th>
+              <th class="px-4 py-3">Properties</th>
+              <th class="px-4 py-3">Best Units</th>
+              <th class="px-4 py-3">Assessed Value Per Unit</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line bg-white">
+            {wardRollups.slice(0, 8).map((rollup) => (
+              <tr>
+                <td class="px-4 py-3 font-semibold">{rollup.ward}</td>
+                <td class="px-4 py-3">{rollup.properties.toLocaleString()}</td>
+                <td class="px-4 py-3">{formatNumber(rollup.units)}</td>
+                <td class="px-4 py-3">{rollup.units > 0 ? formatCurrency(rollup.assessedTotal / rollup.units) : "Not listed"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="border-t border-line bg-white">
     <div class="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-3 lg:px-8">
       <div>
         <h2 class="text-2xl font-bold">Record Categories</h2>

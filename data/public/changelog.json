@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "generated_at": "2026-06-03T21:21:13Z",
+  "generated_at": "2026-06-05T15:21:34Z",
   "changes": [
     {
       "event_id": "chg-owner_name_changed-2025-parcel-0102824140165",
@@ -6883,26 +6883,6 @@
       "public_note": "Minneapolis assessing records show a taxpayer name change between 2024 and 2025."
     },
     {
-      "event_id": "chg-owner_name_changed-2025-parcel-0802824410062",
-      "property_id": "parcel-0802824410062",
-      "event_date": "2025-01-01",
-      "event_type": "owner_name_changed",
-      "old_value": "NESLE-IN LLC",
-      "new_value": "NESLE IN LLC",
-      "source_id": "minneapolis_assessing_parcels_2025",
-      "public_note": "Minneapolis assessing records show an owner name change between 2024 and 2025."
-    },
-    {
-      "event_id": "chg-taxpayer_name_changed-2025-parcel-0802824410062",
-      "property_id": "parcel-0802824410062",
-      "event_date": "2025-01-01",
-      "event_type": "taxpayer_name_changed",
-      "old_value": "NESLE-IN LLC | 3200 CHERRY CREEK SOUTH DR | SUITE 470 | DENVER CO 80209",
-      "new_value": "",
-      "source_id": "minneapolis_assessing_parcels_2025",
-      "public_note": "Minneapolis assessing records show a taxpayer name change between 2024 and 2025."
-    },
-    {
       "event_id": "chg-owner_name_changed-2025-parcel-0802924110056",
       "property_id": "parcel-0802924110056",
       "event_date": "2025-01-01",
@@ -7255,36 +7235,6 @@
     {
       "event_id": "chg-estimated_unit_count_changed-2025-parcel-0802924420077",
       "property_id": "parcel-0802924420077",
-      "event_date": "2025-01-01",
-      "event_type": "estimated_unit_count_changed",
-      "old_value": "1",
-      "new_value": "",
-      "source_id": "minneapolis_assessing_parcels_2025",
-      "public_note": "Minneapolis assessing records show an estimated unit count change between 2024 and 2025."
-    },
-    {
-      "event_id": "chg-taxpayer_name_changed-2025-parcel-0802924420082",
-      "property_id": "parcel-0802924420082",
-      "event_date": "2025-01-01",
-      "event_type": "taxpayer_name_changed",
-      "old_value": "KOU YANG | 3107 THOMAS AVE N | MINNEAPOLIS MN 55411",
-      "new_value": "",
-      "source_id": "minneapolis_assessing_parcels_2025",
-      "public_note": "Minneapolis assessing records show a taxpayer name change between 2024 and 2025."
-    },
-    {
-      "event_id": "chg-property_type_changed-2025-parcel-0802924420082",
-      "property_id": "parcel-0802924420082",
-      "event_date": "2025-01-01",
-      "event_type": "property_type_changed",
-      "old_value": "RESIDENTIAL",
-      "new_value": "RESIDENTIAL 1 UNIT",
-      "source_id": "minneapolis_assessing_parcels_2025",
-      "public_note": "Minneapolis assessing records show a property classification change between 2024 and 2025."
-    },
-    {
-      "event_id": "chg-estimated_unit_count_changed-2025-parcel-0802924420082",
-      "property_id": "parcel-0802924420082",
       "event_date": "2025-01-01",
       "event_type": "estimated_unit_count_changed",
       "old_value": "1",
@@ -17993,26 +17943,6 @@
       "public_note": "Minneapolis assessing records show a taxpayer name change between 2024 and 2025."
     },
     {
-      "event_id": "chg-owner_name_changed-2025-parcel-1602924440146",
-      "property_id": "parcel-1602924440146",
-      "event_date": "2025-01-01",
-      "event_type": "owner_name_changed",
-      "old_value": "SPECIAL SCHOOL DIST NO 1",
-      "new_value": "MPLS BOARD OF EDUCATION DISTRICT #1",
-      "source_id": "minneapolis_assessing_parcels_2025",
-      "public_note": "Minneapolis assessing records show an owner name change between 2024 and 2025."
-    },
-    {
-      "event_id": "chg-taxpayer_name_changed-2025-parcel-1602924440146",
-      "property_id": "parcel-1602924440146",
-      "event_date": "2025-01-01",
-      "event_type": "taxpayer_name_changed",
-      "old_value": "NURTITION CENTER | SPEC SCHOOL DIST 1 | 1250 WEST BROADWAY AVE | MINNEAPOLIS MN 55411",
-      "new_value": "",
-      "source_id": "minneapolis_assessing_parcels_2025",
-      "public_note": "Minneapolis assessing records show a taxpayer name change between 2024 and 2025."
-    },
-    {
       "event_id": "chg-owner_name_changed-2025-parcel-1702823330015",
       "property_id": "parcel-1702823330015",
       "event_date": "2025-01-01",
@@ -18168,16 +18098,6 @@
       "event_date": "2025-01-01",
       "event_type": "taxpayer_name_changed",
       "old_value": "MPHA | ATTN FINANCE | 1001 WASHINGTON AVE N | MINNEAPOLIS MN 55401",
-      "new_value": "",
-      "source_id": "minneapolis_assessing_parcels_2025",
-      "public_note": "Minneapolis assessing records show a taxpayer name change between 2024 and 2025."
-    },
-    {
-      "event_id": "chg-taxpayer_name_changed-2025-parcel-1702823340059",
-      "property_id": "parcel-1702823340059",
-      "event_date": "2025-01-01",
-      "event_type": "taxpayer_name_changed",
-      "old_value": "C/O COMMONBOND COMMUNITIES | 1080 MONTREAL AVE | ST PAUL MN 55116",
       "new_value": "",
       "source_id": "minneapolis_assessing_parcels_2025",
       "public_note": "Minneapolis assessing records show a taxpayer name change between 2024 and 2025."
@@ -21545,36 +21465,6 @@
     {
       "event_id": "chg-estimated_unit_count_changed-2025-parcel-2102924140106",
       "property_id": "parcel-2102924140106",
-      "event_date": "2025-01-01",
-      "event_type": "estimated_unit_count_changed",
-      "old_value": "1",
-      "new_value": "",
-      "source_id": "minneapolis_assessing_parcels_2025",
-      "public_note": "Minneapolis assessing records show an estimated unit count change between 2024 and 2025."
-    },
-    {
-      "event_id": "chg-taxpayer_name_changed-2025-parcel-2102924140112",
-      "property_id": "parcel-2102924140112",
-      "event_date": "2025-01-01",
-      "event_type": "taxpayer_name_changed",
-      "old_value": "MALIK A YUSUF | 843 8TH AVE N | MINNEAPOLIS MN 55411",
-      "new_value": "",
-      "source_id": "minneapolis_assessing_parcels_2025",
-      "public_note": "Minneapolis assessing records show a taxpayer name change between 2024 and 2025."
-    },
-    {
-      "event_id": "chg-property_type_changed-2025-parcel-2102924140112",
-      "property_id": "parcel-2102924140112",
-      "event_date": "2025-01-01",
-      "event_type": "property_type_changed",
-      "old_value": "CONDOMINIUM",
-      "new_value": "RESIDENTIAL 1 UNIT - CONDOMINIUM",
-      "source_id": "minneapolis_assessing_parcels_2025",
-      "public_note": "Minneapolis assessing records show a property classification change between 2024 and 2025."
-    },
-    {
-      "event_id": "chg-estimated_unit_count_changed-2025-parcel-2102924140112",
-      "property_id": "parcel-2102924140112",
       "event_date": "2025-01-01",
       "event_type": "estimated_unit_count_changed",
       "old_value": "1",

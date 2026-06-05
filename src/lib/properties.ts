@@ -17,8 +17,19 @@ export type PropertyRecord = {
   longitude: number | null;
   current_owner_name: string;
   current_taxpayer_name: string;
+  official_property_name: string;
+  official_listed_address: string;
+  is_official_mpha_listing: boolean;
   property_type: string;
   estimated_unit_count: number | null;
+  unit_count_source: string;
+  unit_count_confidence: string;
+  unit_count_notes: string;
+  ward: string;
+  neighborhood: string;
+  community: string;
+  police_precinct: string;
+  police_sector: string;
   current_status: string;
   confidence_level: ConfidenceLevel;
   confidence_score: number;
@@ -111,6 +122,12 @@ export type PropertyFact = {
   above_ground_area: number | null;
   below_ground_area: number | null;
   total_units: number | null;
+  inferred_unit_count: number | null;
+  best_unit_count: number | null;
+  unit_count_source: string;
+  unit_count_confidence: string;
+  unit_count_notes: string;
+  assessed_value_per_unit: number | null;
   building_use: string;
 };
 

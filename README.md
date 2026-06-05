@@ -1,22 +1,22 @@
 # Minneapolis Housing
 
-A static-first public civic data website for exploring Minneapolis Public Housing Authority / Community Housing Resources scattered-site housing properties, source evidence, confidence labels, and portfolio changes over time.
+A static-first public civic data website for exploring Minneapolis Public Housing Authority / Community Housing Resources public housing properties, source evidence, confidence labels, and portfolio changes over time.
 
 The MVP is static-hosting compatible and inspectable: Python ETL generates public CSV, JSON, and GeoJSON files, and Astro serves them as a static site. There is no live database and no paid map dependency.
 
 ## Current Data Status
 
-This checkout includes fetched public source inputs and generated static outputs. The current source fetch was retrieved at `2026-06-03T20:27:17Z`; the latest successful ETL run completed at `2026-06-03T21:21:14Z`.
+This checkout includes fetched public source inputs and generated static outputs. Most current source snapshots were retrieved at `2026-06-03T20:27:17Z`; the city limits layer was refreshed at `2026-06-05T15:15:09Z`; the latest successful ETL run completed at `2026-06-05T15:21:34Z`.
 
 Current generated counts from `data/processed/etl-run-last.json`:
 
-- `properties`: 738
-- `property_versions`: 738
-- `source_records`: 7
-- `property_evidence`: 3,486
-- `change_events`: 2,764
-- `property_facts`: 735
-- `property_permits`: 1,585
+- `properties`: 739
+- `property_versions`: 739
+- `source_records`: 13
+- `property_evidence`: 3,481
+- `change_events`: 2,753
+- `property_facts`: 730
+- `property_permits`: 1,571
 
 Current source adapters:
 
@@ -24,9 +24,16 @@ Current source adapters:
 - `metrogis_hennepin_minneapolis_parcels_current`: lands the Minnesota Geospatial Commons / MetroGIS Hennepin County parcel slice for Minneapolis.
 - `minneapolis_ccs_permits_current`: lands City of Minneapolis Construction and Code Services permit records, then matches permits to exported properties by normalized parcel APN.
 - `minneapolis_assessing_parcels_2023`, `minneapolis_assessing_parcels_2024`, and `minneapolis_assessing_parcels_2025`: land full annual City of Minneapolis assessing parcel tables before owner/taxpayer filtering.
-- `mpha_properties_overview`: records MPHA public portfolio context for CHR scattered-site housing; this source is contextual and does not confirm an individual parcel by itself.
+- `mpha_properties_overview`: lands the official MPHA properties overview into a compact JSONL snapshot; listed high-rise and townhome properties can confirm official portfolio records, while the scattered-site entry provides CHR portfolio context.
+- `minneapolis_city_limits`, `minneapolis_city_council_wards`, `minneapolis_neighborhoods`, `minneapolis_communities`, `minneapolis_police_precincts`, and `minneapolis_mpd_sectors`: land official City of Minneapolis boundary layers for map overlays, property geography labels, and explorer summaries.
 
-MPHA/CHR owner or taxpayer parcel matches are labeled `likely` unless a direct property-level source, such as HUD development `MN002000002 / SCATTERED SITES`, supports `confirmed`. Do not add mock or sample properties.
+MPHA/CHR owner or taxpayer parcel matches are labeled `likely` unless a direct property-level source, such as HUD development `MN002000002 / SCATTERED SITES` or an official MPHA portfolio listing, supports `confirmed`. Do not add mock or sample properties.
+
+Property rows backed by a specific MPHA portfolio listing include `official_property_name`, `official_listed_address`, and `is_official_mpha_listing`. The citywide scattered-site overview entry remains portfolio context rather than a single property-level listing.
+
+Parcel ID is the primary property identity key. HUD, MPHA, parcel, and assessing source rows are consolidated into one property when parcel matching is reliable; ambiguous HUD/MPHA rows remain address-only instead of receiving guessed parcel IDs. Detailed business rules are documented in `docs/methodology.md` and `etl/README.md`.
+
+Reported public-source unit counts are used first. When they are missing, the pipeline may publish conservative inferred counts from property type or building use, including vacant land as 0 units, with the unit-count basis and notes included in public outputs.
 
 ## Tech Stack
 
@@ -99,6 +106,7 @@ The ETL writes public outputs to both `data/public/` and `public/data/`:
 - `properties.csv`
 - `properties.json`
 - `properties.geojson`
+- `civic-boundaries.geojson`
 - `property-facts.csv`
 - `property-facts.json`
 - `property-permits.csv`
